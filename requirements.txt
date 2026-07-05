@@ -1,0 +1,40 @@
+# Whisper large-v3-turbo + MMV-M-RC3.3 (gemma4:12b) 音声整形ツール 依存パッケージ
+# ============================================================
+# インストール手順:
+#   pip install -r requirements.txt
+#
+# GPU(CUDA)を使う場合は先に PyTorch の CUDA版を入れること
+# (RTX 50系 Blackwell は cu128 以降が必須):
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+#
+# Ollamaのインストール（別途）:
+#   Linux/Mac: curl -fsSL https://ollama.com/install.sh | sh
+#   Windows:   https://ollama.com/download から installer を実行
+#
+# モデルのダウンロード（初回のみ）:
+#   ollama pull gemma4:12b
+#
+# MMVハーネス（別途）:
+#   MOBIUS_MMV リポジトリを配置し、whisper_gui.py の MMV_REPO を合わせる
+# ============================================================
+
+# 音声文字起こし
+openai-whisper>=20250625
+
+# HTTP クライアント（Ollama API呼び出し）
+requests>=2.31.0
+
+# GPU 管理（CUDA版 PyTorch が推奨、CPUのみでも動作）
+torch>=2.7.0
+
+# MMVリリースポインタ/プロファイルの読み込み
+pyyaml>=6.0
+
+# ============================================================
+# 音声読み込みは ffmpeg 本体(バイナリ)を whisper が subprocess で
+# 直接呼ぶため、Pythonパッケージ ffmpeg-python は不要。
+# ffmpeg 本体のインストールのみ必要:
+#   Ubuntu/Debian: sudo apt install ffmpeg
+#   Mac:           brew install ffmpeg
+#   Windows:       https://ffmpeg.org/download.html から取得しPATHに追加
+# ============================================================

@@ -1,0 +1,22 @@
+# 私的音声・生成物 — 絶対にコミットしない
+*.m4a
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.aac
+*.txt.out
+transcripts/
+
+# ローカル退避・旧構成
+backup/
+launch.bat
+*.bak*
+
+# Python
+__pycache__/
+*.pyc
+
+# 環境・秘密情報
+.env
+.env.*

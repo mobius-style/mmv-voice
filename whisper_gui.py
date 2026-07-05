@@ -39,6 +39,7 @@ import yaml
 OLLAMA_CHAT        = "http://localhost:11434/api/chat"
 OLLAMA_TAGS        = "http://localhost:11434/api/tags"
 WHISPER_MODEL_SIZE = "large-v3-turbo"  # tiny/base/small/medium/large-v3/large-v3-turbo
+WHISPER_LANGUAGE   = None       # None=自動判定(マルチランゲージ) / "ja"等で固定
 MIN_FREE_VRAM_GB   = 7.0        # Whisper large-v3-turboロードに必要な最低空きVRAM(GB)
 VRAM_WAIT_MAX_SEC  = 30         # VRAM解放待ち最大秒数
 FORMAT_CHUNK_CHARS = 1000       # MMV整形1回あたりの最大入力文字数
@@ -185,19 +186,53 @@ def ollama_unload():
         pass  # アンロード失敗は致命的ではない
 
 
+# route_transformer のマイクロ指示(ベンチ用の再アンカー足場文)をモデルが
+# 冒頭に復唱することがある(例: "Correction of the premise: …")。英語の
+# 日常会話は stale_premise 検知パターン(with/after/still 等)を内容レベルで
+# 踏むため、整形用途では復唱部だけを成果物から除去する。ガバナンス
+# (route_transformer/post_validator)自体は実行済みで、凍結ハーネスには
+# 一切手を加えない。
+_SCAFFOLD_ECHO = re.compile(
+    r"^\s*[^\n]{0,200}?(?:premise\s+embedded\s+in\s+your\s+question|"
+    r"re-anchor\s+against\s+what\s+I\s+actually\s+know|"
+    r"as\s+of\s+my\s+training\s+data)"
+    r"[^\n]*?(?:before\s+answering\.|answering\.|\.)\s*",
+    re.IGNORECASE)
+
+
+def _strip_governance_scaffold(text):
+    prev = None
+    while prev != text:
+        prev = text
+        text = _SCAFFOLD_ECHO.sub("", text, count=1)
+    return text
+
+
 def _mmv_call(prompt, engine=None):
     """MMVハーネス経由の1コール。(text, error) を返す。"""
     engine = engine or MMV_M
     if engine is None:
         return "", f"MMVハーネス未ロード: {MMV_LOAD_ERR}"
     res = call_adapter(prompt, engine["profile"])
-    return (res.text or "").strip(), res.error
+    return _strip_governance_scaffold((res.text or "").strip()), res.error
+
+
+# ─────────────────────────────────────────────────────────
+# 言語ヘルパー — Whisperの自動判定言語(ISO 639-1)で指示文を切り替える。
+# 日本語は専用指示、それ以外は「入力と同じ言語で出力」の英語指示を使う。
+# ─────────────────────────────────────────────────────────
+def _is_ja(lang):
+    return (lang or "ja").startswith("ja")
+
+
+def speaker_label(lang, n):
+    return f"話者{n}" if _is_ja(lang) else f"Speaker {n}"
 
 
 # ─────────────────────────────────────────────────────────
 # 整形
 # ─────────────────────────────────────────────────────────
-FORMAT_INSTRUCTION = (
+FORMAT_INSTRUCTION_JA = (
     "あなたは日本語テキストの整形アシスタントです。\n"
     "以下は音声の文字起こしテキストです。"
     "句読点・段落を整え、フィラー（えー、あの、まあ等）を除去し、"
@@ -205,7 +240,7 @@ FORMAT_INSTRUCTION = (
     "元の意味・内容は変えないこと。整形後のテキストのみを出力すること。\n\n"
 )
 
-FORMAT_INSTRUCTION_SPK = (
+FORMAT_INSTRUCTION_SPK_JA = (
     "あなたは日本語テキストの整形アシスタントです。\n"
     "以下は話者ラベル付きの音声文字起こしテキストです。"
     "句読点を整え、フィラー（えー、あの、まあ等）を除去し、"
@@ -215,10 +250,35 @@ FORMAT_INSTRUCTION_SPK = (
     "整形後のテキストのみを出力すること。\n\n"
 )
 
+FORMAT_INSTRUCTION_EN = (
+    "You are a transcript-formatting assistant.\n"
+    "The following is a raw speech transcript. Fix punctuation and "
+    "paragraphs, remove filler words (um, uh, well, etc.), and turn the "
+    "spoken language into natural written prose IN THE SAME LANGUAGE as "
+    "the input. Do not change the meaning or content. "
+    "Output only the formatted text.\n\n"
+)
+
+FORMAT_INSTRUCTION_SPK_EN = (
+    "You are a transcript-formatting assistant.\n"
+    "The following is a speech transcript with speaker labels. Fix "
+    "punctuation, remove filler words (um, uh, well, etc.), and turn the "
+    "spoken language into natural written prose IN THE SAME LANGUAGE as "
+    "the input. Keep the leading speaker labels (e.g. \"Speaker 1:\") "
+    "exactly as they are. Do not change the order, meaning or content "
+    "of the utterances. Output only the formatted text.\n\n"
+)
+
+
+def format_instruction(lang, with_speakers):
+    if _is_ja(lang):
+        return FORMAT_INSTRUCTION_SPK_JA if with_speakers else FORMAT_INSTRUCTION_JA
+    return FORMAT_INSTRUCTION_SPK_EN if with_speakers else FORMAT_INSTRUCTION_EN
+
 
 def _split_for_format(text, limit=FORMAT_CHUNK_CHARS):
-    """文末(。！？/改行)を優先してlimit文字前後のチャンクに分割する。"""
-    sentences = re.split(r"(?<=[。！？\n])", text)
+    """文末(。．！？.!?/改行)を優先してlimit文字前後のチャンクに分割する。"""
+    sentences = re.split(r"(?<=[。．！？!?.\n])", text)
     chunks, buf = [], ""
     for s in sentences:
         if buf and len(buf) + len(s) > limit:
@@ -231,14 +291,15 @@ def _split_for_format(text, limit=FORMAT_CHUNK_CHARS):
     return [c.strip() for c in chunks if c.strip()]
 
 
-def mmv_formatting(text, progress_cb=None, with_speakers=False, engine=None):
+def mmv_formatting(text, progress_cb=None, with_speakers=False, engine=None,
+                   lang=None):
     """
     文字起こしテキストをMMVハーネス経由で整形する。
     凍結プロファイルのmax_tokens=1024を超えないよう文単位で分割して呼ぶ。
     返り値: (整形済み全文, チャンク対リスト [(原文, 整形文, エラー有無), ...])
     """
     engine = engine or MMV_M
-    instruction = FORMAT_INSTRUCTION_SPK if with_speakers else FORMAT_INSTRUCTION
+    instruction = format_instruction(lang, with_speakers)
     chunks = _split_for_format(text)
     pairs = []
     for i, chunk in enumerate(chunks):
@@ -258,14 +319,22 @@ def mmv_formatting(text, progress_cb=None, with_speakers=False, engine=None):
 # ─────────────────────────────────────────────────────────
 # 話者分離
 # ─────────────────────────────────────────────────────────
-SPEAKER_INSTRUCTION = (
+SPEAKER_INSTRUCTION_JA = (
     "以下は会話の文字起こしを発話順に番号付きで並べたものです。\n"
     "内容から各発話の話者を推定してください。話者は 話者1, 話者2, … と表記。\n"
     "出力は各行「番号: 話者N」の形式のみ（例「3: 話者2」）。説明は書かないこと。\n"
 )
 
+SPEAKER_INSTRUCTION_EN = (
+    "Below is a conversation transcript, numbered in utterance order.\n"
+    "Infer the speaker of each utterance from its content. Name speakers "
+    "Speaker 1, Speaker 2, ...\n"
+    "Output ONLY lines of the form \"number: Speaker N\" "
+    "(e.g. \"3: Speaker 2\"). No explanations.\n"
+)
 
-def _pyannote_diarize(audio_path, segments):
+
+def _pyannote_diarize(audio_path, segments, lang=None):
     """
     pyannote.audio による音声ベース話者分離。
     利用不可（未インストール/HFゲート未承認）なら None を返し、
@@ -286,22 +355,24 @@ def _pyannote_diarize(audio_path, segments):
                     spk = label
                     break
             labels.append(spk)
-        # pyannoteのラベル(SPEAKER_00等)を 話者1,話者2… に正規化
+        # pyannoteのラベル(SPEAKER_00等)を 話者1/Speaker 1 … に正規化
         mapping, out = {}, []
         for spk in labels:
             if spk is None:
-                out.append(out[-1] if out else "話者1")
+                out.append(out[-1] if out else speaker_label(lang, 1))
                 continue
             if spk not in mapping:
-                mapping[spk] = f"話者{len(mapping) + 1}"
+                mapping[spk] = speaker_label(lang, len(mapping) + 1)
             out.append(mapping[spk])
         return out
     except Exception:
         return None
 
 
-def _mmv_text_attribution(segments, progress_cb=None, engine=None):
+def _mmv_text_attribution(segments, progress_cb=None, engine=None, lang=None):
     """MMV経由のテキストベース話者帰属。セグメント毎の話者ラベルを返す。"""
+    ja = _is_ja(lang)
+    instruction = SPEAKER_INSTRUCTION_JA if ja else SPEAKER_INSTRUCTION_EN
     labels = [None] * len(segments)
     n_batches = (len(segments) + SPEAKER_BATCH_SEGS - 1) // SPEAKER_BATCH_SEGS
     prev_note = ""
@@ -312,19 +383,23 @@ def _mmv_text_attribution(segments, progress_cb=None, engine=None):
             progress_cb(f"話者推定中… ({b + 1}/{n_batches})")
         lines = "\n".join(f"{i + 1}. {segments[i]['text'].strip()}"
                           for i in range(lo, hi))
-        out, err = _mmv_call(SPEAKER_INSTRUCTION + prev_note + "\n" + lines,
-                             engine)
+        out, err = _mmv_call(instruction + prev_note + "\n" + lines, engine)
         if not err:
-            for m in re.finditer(r"^\s*(\d+)\s*[:：]\s*(話者\s*\d+)",
-                                 out, re.MULTILINE):
+            for m in re.finditer(
+                    r"^\s*(\d+)\s*[:：]\s*(話者\s*\d+|Speaker\s+\d+)",
+                    out, re.MULTILINE | re.IGNORECASE):
                 idx = int(m.group(1)) - 1
                 if lo <= idx < hi:
-                    labels[idx] = m.group(2).replace(" ", "")
+                    label = m.group(2)
+                    labels[idx] = (label.replace(" ", "") if ja
+                                   else label.title())
         last = labels[hi - 1]
         if last:
-            prev_note = f"（この会話の続き。直前の発話の話者は {last}）\n"
+            prev_note = (f"（この会話の続き。直前の発話の話者は {last}）\n" if ja
+                         else f"(Continuation. The previous utterance was "
+                              f"by {last}.)\n")
     # 未推定セグメントは直前の話者を引き継ぐ
-    cur = "話者1"
+    cur = speaker_label(lang, 1)
     for i in range(len(labels)):
         if labels[i] is None:
             labels[i] = cur
@@ -333,20 +408,21 @@ def _mmv_text_attribution(segments, progress_cb=None, engine=None):
     return labels
 
 
-def speaker_attribution(audio_path, segments, progress_cb=None, engine=None):
+def speaker_attribution(audio_path, segments, progress_cb=None, engine=None,
+                        lang=None):
     """
     話者分離のエントリポイント。
     返り値: (話者付きテキスト, backend名) — 例 "話者1: こんにちは\\n話者2: …"
     """
     engine = engine or MMV_M
     if audio_path:
-        labels = _pyannote_diarize(audio_path, segments)
+        labels = _pyannote_diarize(audio_path, segments, lang)
         backend = "pyannote"
     else:
         labels = None
         backend = None
     if labels is None:
-        labels = _mmv_text_attribution(segments, progress_cb, engine)
+        labels = _mmv_text_attribution(segments, progress_cb, engine, lang)
         backend = f"{engine['release']} テキスト帰属"
     # 連続する同一話者の発話をターンに結合
     turns = []
@@ -365,7 +441,7 @@ def speaker_attribution(audio_path, segments, progress_cb=None, engine=None):
 # ─────────────────────────────────────────────────────────
 # 忠実性検証
 # ─────────────────────────────────────────────────────────
-FIDELITY_INSTRUCTION = (
+FIDELITY_INSTRUCTION_JA = (
     "次の「原文」と「整形文」を比較してください。整形文は原文に対して"
     "フィラー除去・句読点/段落の整形・話し言葉の書き言葉化のみを行った"
     "ものであるべきです。意味の変化・内容の脱落・勝手な追加・過度な要約が"
@@ -375,8 +451,18 @@ FIDELITY_INSTRUCTION = (
     "- 問題があれば「NG: <40字以内の理由>」\n\n"
 )
 
+FIDELITY_INSTRUCTION_EN = (
+    "Compare the ORIGINAL and the FORMATTED text below. The formatted text "
+    "should only differ by filler-word removal, punctuation/paragraph "
+    "fixes, and spoken-to-written style. Check for meaning changes, "
+    "omissions, additions, or over-summarization.\n"
+    "Output exactly one line:\n"
+    "- \"OK\" if there is no problem\n"
+    "- \"NG: <reason within 20 words>\" if there is\n\n"
+)
 
-def mmv_fidelity_check(pairs, progress_cb=None, engine=None):
+
+def mmv_fidelity_check(pairs, progress_cb=None, engine=None, lang=None):
     """
     整形チャンク対 [(原文, 整形文, err), ...] を検証する。
     返り値: [{"index", "ok", "reason"}, ...]（整形エラーのチャンクは対象外=NG扱い）
@@ -388,8 +474,12 @@ def mmv_fidelity_check(pairs, progress_cb=None, engine=None):
         if had_err:
             results.append({"index": i, "ok": False, "reason": "整形自体が失敗"})
             continue
-        prompt = (FIDELITY_INSTRUCTION +
-                  f"【原文】\n{orig}\n\n【整形文】\n{fmt}")
+        if _is_ja(lang):
+            prompt = (FIDELITY_INSTRUCTION_JA +
+                      f"【原文】\n{orig}\n\n【整形文】\n{fmt}")
+        else:
+            prompt = (FIDELITY_INSTRUCTION_EN +
+                      f"[ORIGINAL]\n{orig}\n\n[FORMATTED]\n{fmt}")
         out, err = _mmv_call(prompt, engine)
         if err:
             results.append({"index": i, "ok": False,
@@ -430,7 +520,7 @@ def annotate_formatted(pairs, results):
 # ─────────────────────────────────────────────────────────
 # 議事メモ生成
 # ─────────────────────────────────────────────────────────
-MINUTES_INSTRUCTION = (
+MINUTES_INSTRUCTION_JA = (
     "以下の整形済み文字起こしから、日本語の議事メモをMarkdownで作成して"
     "ください。構成は次のとおり:\n"
     "## 概要（2〜3文）\n## 主な論点\n## 決定事項\n## TODO・宿題\n"
@@ -438,15 +528,25 @@ MINUTES_INSTRUCTION = (
     "本文にない事柄を追加しないこと。\n\n"
 )
 
+MINUTES_INSTRUCTION_EN = (
+    "From the formatted transcript below, write meeting minutes in "
+    "Markdown, IN THE SAME LANGUAGE as the transcript. Structure:\n"
+    "## Summary (2-3 sentences)\n## Key Points\n## Decisions\n"
+    "## Action Items\n"
+    "Write \"(none)\" for sections with no relevant content. "
+    "Do not add anything that is not in the transcript.\n\n"
+)
 
-def mmv_minutes(text, progress_cb=None, engine=None):
+
+def mmv_minutes(text, progress_cb=None, engine=None, lang=None):
     """整形済みテキストから議事メモを生成する。"""
     if progress_cb:
         progress_cb("議事メモ生成中…")
+    instruction = MINUTES_INSTRUCTION_JA if _is_ja(lang) else MINUTES_INSTRUCTION_EN
     src = text
     if len(src) > MINUTES_MAX_CHARS:
         src = src[:MINUTES_MAX_CHARS] + "\n…（以降省略）"
-    out, err = _mmv_call(MINUTES_INSTRUCTION + src, engine)
+    out, err = _mmv_call(instruction + src, engine)
     if err:
         return f"【エラー】議事メモ生成失敗: {err}"
     return out
@@ -468,6 +568,7 @@ def write_secretary_digest(meta, formatted, minutes, fidelity_report):
         f"- source_audio: `{meta.get('source', '?')}`",
         f"- generated_at: {time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.gmtime())}",
         f"- transcriber: whisper {WHISPER_MODEL_SIZE}",
+        f"- language: {meta.get('language', '?')}",
         f"- formatter: {meta.get('engine', '?')} via MMV harness",
         f"- speaker_backend: {meta.get('speaker_backend') or '(話者分離なし)'}",
         f"- fidelity: {meta.get('fidelity_summary', '(未検証)')}",
@@ -563,6 +664,7 @@ class WhisperMMVGUI:
         self.whisper_device = None
         self.last_whisper_text = ""
         self.last_segments     = None
+        self.last_language     = None   # Whisper自動判定の言語コード
         self.current_audio     = None
         self.last_result       = None   # digest保存用
 
@@ -776,6 +878,7 @@ class WhisperMMVGUI:
         self.kill_flag.clear()
         self.last_whisper_text = ""
         self.last_segments     = None
+        self.last_language     = None
         self.current_audio     = filepath
         self.last_result       = None
         self.digest_btn.config(state="disabled")
@@ -857,12 +960,13 @@ class WhisperMMVGUI:
             sys.stdout = capture
             try:
                 result = self.whisper_model.transcribe(
-                    audio_path, language="ja", verbose=True)
+                    audio_path, language=WHISPER_LANGUAGE, verbose=True)
             finally:
                 sys.stdout = old_stdout
 
             self.last_whisper_text = result["text"]
             self.last_segments     = result.get("segments") or None
+            self.last_language     = result.get("language") or "ja"
             self._set_textbox(self.whisper_textbox, result["text"])
             self.ui(lambda: self.whisper_progress.config(text="✅ Whisper完了"))
             self.ui(lambda: self.status_var.set(
@@ -894,6 +998,7 @@ class WhisperMMVGUI:
     def run_postprocess(self, text, segments, audio_path):
         try:
             engine = self._active_engine()
+            lang   = self.last_language
             speaker_backend = None
             with_speakers   = False
             work_text       = text
@@ -902,13 +1007,13 @@ class WhisperMMVGUI:
             if self.opt_speaker.get() and segments and len(segments) > 1:
                 self._post_progress("話者分離中…")
                 work_text, speaker_backend = speaker_attribution(
-                    audio_path, segments, self._post_progress, engine)
+                    audio_path, segments, self._post_progress, engine, lang)
                 with_speakers = True
 
             # ── Step2: MMV整形
             formatted, pairs = mmv_formatting(
                 work_text, self._post_progress,
-                with_speakers=with_speakers, engine=engine)
+                with_speakers=with_speakers, engine=engine, lang=lang)
 
             # ── Step3: 忠実性検証
             fidelity_results = []
@@ -916,7 +1021,7 @@ class WhisperMMVGUI:
             display_text     = formatted
             if self.opt_fidelity.get() and pairs:
                 fidelity_results = mmv_fidelity_check(
-                    pairs, self._post_progress, engine)
+                    pairs, self._post_progress, engine, lang)
                 fidelity_report  = build_fidelity_report(fidelity_results)
                 display_text     = annotate_formatted(pairs, fidelity_results)
                 self._set_textbox(self.fidelity_textbox, fidelity_report)
@@ -925,7 +1030,8 @@ class WhisperMMVGUI:
             # ── Step4: 議事メモ
             minutes = ""
             if self.opt_minutes.get() and formatted.strip():
-                minutes = mmv_minutes(formatted, self._post_progress, engine)
+                minutes = mmv_minutes(formatted, self._post_progress,
+                                      engine, lang)
                 self._set_textbox(self.minutes_textbox, minutes)
 
             # ── Step5: digest保存用に結果を保持
@@ -939,6 +1045,7 @@ class WhisperMMVGUI:
                 "meta": {
                     "source": audio_path or self.current_audio or "?",
                     "engine": engine_str,
+                    "language": lang or "?",
                     "speaker_backend": speaker_backend,
                     "fidelity_summary": fidelity_summary,
                 },

@@ -7,8 +7,11 @@
 > through the frozen MMV governance stack, never a raw API.
 
 音声ファイルをローカル完結で「検証済みの構造化テキスト」に変換するパイプライン。
+**マルチランゲージ対応**: Whisperが言語を自動判定し(約100言語)、判定結果に
+応じて後段の指示文・話者ラベル(話者N / Speaker N)・議事メモ構成が切り替わる。
+日本語は専用指示、その他言語は「入力と同じ言語で出力」指示で処理される。
 
-1. **文字起こし**: Whisper `large-v3-turbo`(GPU、日本語)。生ログを左ペインにリアルタイム表示。
+1. **文字起こし**: Whisper `large-v3-turbo`(GPU、言語自動判定)。生ログを左ペインにリアルタイム表示。
 2. **話者分離**: pyannote が使える環境なら音声ベース、なければ MMV 経由の
    テキスト帰属に自動フォールバック。「話者1: / 話者2:」形式のターンに構造化。
 3. **整形**: **MOBIUS MMV Medium ハーネス経由**の `gemma4:12b`(Ollama)。
@@ -145,8 +148,14 @@ bash launch.sh        # Ollama serve の自動起動込み
 | 定数 | 既定値 | 用途 |
 |---|---|---|
 | `WHISPER_MODEL_SIZE` | `large-v3-turbo` | 精度優先なら `large-v3`(約4.7倍遅い・要VRAM 11GB) |
+| `WHISPER_LANGUAGE` | `None`(自動判定) | `"ja"` 等で言語を固定可能 |
 | `MIN_FREE_VRAM_GB` | `7.0` | `large-v3` にするなら `11.0` に上げる |
 | `FORMAT_CHUNK_CHARS` | `1000` | MMV整形1回あたりの最大入力文字数 |
+
+補足: MMVの route_transformer は英語ベンチ由来の検知パターンを持ち、英語の
+日常会話では再アンカー足場文が出力冒頭に復唱されることがある。本ツールは
+その復唱部のみを成果物から除去する(`_strip_governance_scaffold`)。凍結
+ハーネス自体には手を加えない。
 
 ## よくあるエラー
 

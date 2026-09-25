@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MMV Voice</title>
-<meta name="description" content="Whisper transcription plus local Gemma punctuation with a deterministic preservation check. Source, tests and measured trials.">
+<meta name="description" content="Local-first speech-to-text: Whisper transcription and on-device Gemma punctuation with a deterministic preservation check. Nothing leaves your machine by default.">
 <style>
   :root { --bg:#ffffff; --fg:#1d1d1f; --muted:#5c5c66; --line:#e4e4ea; --accent:#5b3fa0; --code:#f4f3f8; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#141418; --fg:#ececf1; --muted:#a2a2ad; --line:#2c2c34; --accent:#b9a3f0; --code:#1f1f26; } }
@@ -30,7 +30,7 @@
 <body>
 <main>
   <h1>MMV Voice</h1>
-  <p class="lead">Whisper transcription → local Gemma punctuation → a deterministic check that rejects any change to words or numbers. Linux desktop GUI, AGPL-3.0, no fine-tuning.</p>
+  <p class="lead"><strong>Local-first.</strong> Whisper transcription → on-device Gemma punctuation → a deterministic check that rejects any change to words or numbers. Audio, text and models stay on your machine; nothing is sent anywhere unless you opt in. Linux desktop GUI, AGPL-3.0, no fine-tuning.</p>
 
   <p class="links">
     <a href="https://github.com/mobius-style/mmv-voice">Source on GitHub</a>
@@ -41,6 +41,7 @@
 
   <h2>What it does</h2>
   <ul>
+    <li>Runs entirely on your own computer by default: local Whisper, local Ollama model, loopback-only endpoint, no accounts, no telemetry.</li>
     <li>Transcribes with Whisper <code>large-v3-turbo</code>, language auto-detected.</li>
     <li>Asks a local <code>gemma4:12b-it-qat</code> (Ollama, through the MMV harness) to insert punctuation and line breaks <em>only</em>.</li>
     <li>Rejects every candidate whose words or numbers differ from the transcript and keeps the raw text for that chunk; the report shows source, candidate and reason.</li>

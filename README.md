@@ -7,21 +7,23 @@ sdk: static
 app_file: index.html
 pinned: false
 license: agpl-3.0
-short_description: Whisper transcription + local Gemma punctuation with a preservation check
+short_description: Local-first speech-to-text: Whisper + on-device Gemma
 ---
 
 *The block above is Hugging Face Space metadata; it is not application configuration.*
 
-# mmv-voice — Whisper large-v3-turbo + MMV formatting pipeline
+# mmv-voice — local-first transcription and punctuation (Whisper + MMV)
 
-> Governance-mediated voice pipeline: Whisper transcription, MMV-governed
-> formatting, optional speaker attribution, fidelity check, minutes and
-> secretary-digest output. A sibling of
-> [mobius-style/mmv](https://github.com/mobius-style/mmv) — every LLM call
-> goes through the MMV harness, never a raw API.
+> **Local-first by design.** Audio, transcript, model and formatting all stay
+> on your own machine: Whisper runs locally, the punctuation model is a local
+> `gemma4:12b-it-qat` behind a loopback-only endpoint, and nothing is sent
+> anywhere unless you explicitly switch on the opt-in cloud engine and
+> confirm the dialog. Governance-mediated: every LLM call goes through the
+> MMV harness, never a raw API. A sibling of
+> [mobius-style/mmv](https://github.com/mobius-style/mmv).
 
 A Linux desktop GUI (Tk) that turns an audio file into verified, structured
-text on your own machine. Whisper detects the language automatically
+text without leaving your computer. Whisper detects the language automatically
 (about 100 languages); Japanese gets dedicated instructions, other languages
 are processed with "reply in the same language as the input" instructions.
 
@@ -249,6 +251,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.1` | 2026-09-25 | documentation only: local-first wording, Hugging Face metadata |
 | `v0.2` | 2026-09-25 | default engine replaced by MMV-Format (punctuation-only, preservation check, digest pinning, audit in report); speaker / fidelity / minutes now off by default; English documentation; measured trials in `eval/` |
 
 The v0.1 formatter rewrote text (filler removal, spoken-to-written style)
@@ -256,11 +259,17 @@ and relied on an LLM fidelity check to catch silent changes. v0.2 inverts
 that: the model may only add punctuation, and a deterministic check
 enforces it. If you need the old behaviour, check out tag `v0.1`.
 
-## Privacy
+## Local-first and privacy
 
-Everything runs locally by default. Text leaves the machine only when
-MMV-L is selected, and only after a confirmation dialog. No audio,
-transcripts or digests are part of this repository.
+- **No network at run time by default.** Whisper weights and the Ollama
+  model are loaded from local disk; the formatter endpoint is restricted to
+  loopback (`127.0.0.1` / `localhost`) and any other host is refused.
+- **Nothing leaves the machine unless you choose it.** Text is sent off-machine
+  only when the MMV-L cloud engine is selected, and only after a confirmation
+  dialog names the destination; the digest records which engine was used.
+- **Your data is not part of this repository.** Audio, transcripts, digests
+  and reference CSVs are git-ignored.
+- **No telemetry, no accounts, no API keys** for the default path.
 
 ## License
 

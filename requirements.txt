@@ -1,40 +1,34 @@
-# Whisper large-v3-turbo + MMV-M-RC3.3 (gemma4:12b) 音声整形ツール 依存パッケージ
+# Whisper large-v3-turbo + MOBIUS MMV 12B QAT Voice Formatting Tool — dependencies
 # ============================================================
-# インストール手順:
+# Installation:
 #   pip install -r requirements.txt
 #
-# GPU(CUDA)を使う場合は先に PyTorch の CUDA版を入れること
-# (RTX 50系 Blackwell は cu128 以降が必須):
+# To use the GPU (CUDA), install the CUDA build of PyTorch first
+# (RTX 50-series Blackwell requires cu128 or later):
 #   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 #
-# Ollamaのインストール（別途）:
-#   Linux/Mac: curl -fsSL https://ollama.com/install.sh | sh
-#   Windows:   https://ollama.com/download から installer を実行
-#
-# モデルのダウンロード（初回のみ）:
-#   ollama pull gemma4:12b
-#
-# MMVハーネス（別途）:
-#   MOBIUS_MMV リポジトリを配置し、whisper_gui.py の MMV_REPO を合わせる
+# See README.md for preparing Ollama, the evaluated model and the MMV
+# harness repository (needed by the local MMV-Format engine and the optional
+# cloud path alike; set MMV_REPO if it is not at the default location).
 # ============================================================
 
-# 音声文字起こし
+# Speech transcription
 openai-whisper>=20250625
 
-# HTTP クライアント（Ollama API呼び出し）
+# HTTP client (used by the MMV harness adapters)
 requests>=2.31.0
 
-# GPU 管理（CUDA版 PyTorch が推奨、CPUのみでも動作）
+# GPU management (CUDA build of PyTorch recommended; CPU-only also works)
 torch>=2.7.0
 
-# MMVリリースポインタ/プロファイルの読み込み
+# Reading MMV release pointers / profiles
 pyyaml>=6.0
 
 # ============================================================
-# 音声読み込みは ffmpeg 本体(バイナリ)を whisper が subprocess で
-# 直接呼ぶため、Pythonパッケージ ffmpeg-python は不要。
-# ffmpeg 本体のインストールのみ必要:
+# Audio loading calls the ffmpeg binary directly via subprocess from
+# whisper, so the Python package ffmpeg-python is NOT required.
+# Only the ffmpeg binary itself must be installed:
 #   Ubuntu/Debian: sudo apt install ffmpeg
 #   Mac:           brew install ffmpeg
-#   Windows:       https://ffmpeg.org/download.html から取得しPATHに追加
+#   Windows:       download from https://ffmpeg.org/download.html and add to PATH
 # ============================================================

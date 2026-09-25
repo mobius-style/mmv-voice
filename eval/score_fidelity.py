@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Wisper 忠実性・話者帰属スコアラ (measurement 12) — 判定モデル不要。
+"""mmv-voice fidelity and speaker-attribution scorer (measurement 12) -- no judge model.
 
-入力:
-  --wisper-json  Wisperパイプライン出力のセグメント列
+Inputs:
+  --wisper-json  segment list output by the mmv-voice pipeline
                  [{"start": s, "end": e, "speaker": "A", "text": "...",
-                   "text_formatted": "..."(任意)}]
-  --reference    人手正解CSV (start_sec,end_sec,speaker,text)
+                   "text_formatted": "..." (optional)}]
+  --reference    human ground-truth CSV (start_sec,end_sec,speaker,text)
 
-出力: 生/整形後それぞれのCER、話者帰属accuracy+混同行列 (JSON+stdout)。
-セグメント対応づけは時間重なり最大のもの。日本語は文字ベースCER。
+Output: CER for raw and formatted text respectively, speaker-attribution accuracy
+plus confusion matrix (JSON + stdout). Segments are matched by maximum time overlap.
+Japanese is scored with character-based CER.
 """
 from __future__ import annotations
 
@@ -74,7 +75,8 @@ def main() -> int:
     raw_cers, fmt_cers = [], []
     spk_total, spk_hit = 0, 0
     confusion: dict[str, dict[str, int]] = {}
-    # 話者記号の対応は貪欲最頻マッチ(A↔SPEAKER_00等の記号差を吸収)
+    # Speaker symbols are mapped by greedy most-frequent matching (absorbs label
+    # differences such as A <-> SPEAKER_00)
     from collections import Counter, defaultdict
     votes: dict[str, Counter] = defaultdict(Counter)
     for r, h in pairs:

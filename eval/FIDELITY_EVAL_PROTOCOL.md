@@ -1,13 +1,13 @@
-# Wisper 忠実性・話者帰属 定量評価プロトコル (measurement 12)
+# mmv-voice fidelity and speaker-attribution scoring protocol (measurement 12)
 
-**目的:** Wisperの (a) 文字起こし忠実性、(b) テキスト話者帰属の精度を、
-人手の正解ラベルに対して数値化する。判定モデル不要・決定論採点。
+**Purpose:** quantify mmv-voice's (a) transcription fidelity and (b) text speaker-attribution
+accuracy against human-made ground-truth labels. No judge model; deterministic scoring.
 
-## オーナーにお願いする作業(これだけ)
+## What we ask of the owner (only this)
 
-1. 対象録音を1本選ぶ(例: `20250724.m4a`)。
-2. 録音から **連続した約5分** を聴き、`eval/reference_<name>.csv` に
-   正解を書く。1行=1発話セグメント:
+1. Pick one target recording (e.g. `meeting.m4a`).
+2. Listen to **about 5 contiguous minutes** of the recording and write the ground truth
+   into `eval/reference_<name>.csv`. 1 row = 1 utterance segment:
 
 ```csv
 start_sec,end_sec,speaker,text
@@ -15,25 +15,30 @@ start_sec,end_sec,speaker,text
 18.9,24.0,B,相手の発話も同様に
 ```
 
-- `speaker` は A/B/C… の記号でよい(名前不要)。
-- `text` は聞こえたとおり逐語で(フィラー「えー」等は任意だが方針を統一)。
-- 目安: 5分 ≈ 40〜60行。所要 20〜30分。
+(The example `text` values are placeholder Japanese transcript strings: "write here exactly the string as heard" / "the other party's utterance likewise".)
 
-## 自動側(スクリプトが行う)
+- `speaker` may be a symbol such as A/B/C… (no names needed).
+- `text` is verbatim as heard (fillers such as "ee/uh" are optional, but keep the policy consistent).
+- Guide: 5 minutes ≈ 40–60 rows. Takes 20–30 minutes.
+
+## Automatic side (done by the script)
 
 `python3 eval/score_fidelity.py <audio> eval/reference_<name>.csv`
 
-1. Wisperパイプライン(large-v3-turbo + MMV整形)で同区間を処理。
-2. **忠実性:** 正解テキストとの文字誤り率 (CER) / 単語誤り率 (WER 相当、
-   日本語は文字ベース) をセグメント整列後に算出。
-   - 生transcriptとMMV整形後の両方を採点 → 整形が忠実性を壊していないか
-     (Δ fidelity) を分離測定。これがWisperの核心主張の検証。
-3. **話者帰属:** 各正解セグメントに時間重なりで対応づけた出力セグメントの
-   話者ラベルとの一致率 (accuracy + 混同行列)。
-4. 出力: `eval/results_<name>_<ts>.json` + Markdownサマリ。
+1. Process the same span with the mmv-voice pipeline (large-v3-turbo + MMV formatting).
+2. **Fidelity:** compute the character error rate (CER) / word error rate (WER-equivalent;
+   character-based for Japanese) against the ground-truth text after segment alignment.
+   - Score both the raw transcript and the MMV-formatted output → measure separately
+     whether formatting breaks fidelity (Δ fidelity). This is the verification of
+     mmv-voice's core claim.
+3. **Speaker attribution:** agreement rate (accuracy + confusion matrix) between each
+   ground-truth segment's speaker label and that of the output segment matched to it by
+   time overlap.
+4. Output: `eval/results_<name>_<ts>.json` + a Markdown summary.
 
-## 合否の読み方(事前登録)
+## How to read pass/fail (preregistered)
 
-- 忠実性: 整形後CERが生transcript CER + 2pt 以内 →「整形は忠実性を保つ」。
-- 帰属: accuracy ≥ 0.85 で実用水準、< 0.7 は要改修。
-- n=1録音では方向性のみ。2本目(別話者構成)で再現すれば知見として固定。
+- Fidelity: formatted CER within raw-transcript CER + 2pt → "formatting preserves fidelity".
+- Attribution: accuracy ≥ 0.85 is practical level; < 0.7 needs rework.
+- With n=1 recording, directional only. If it reproduces on a 2nd recording (different speaker
+  configuration), fix it as a finding.

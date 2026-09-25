@@ -1,12 +1,10 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=音声整形ツール
-Name[en]=MMV Voice Tool
-Comment=Whisper文字起こし + MMVガバナンス整形
-Comment[en]=Whisper transcription + MMV-governed formatting
-# ↓ このパスをツールを置いたフォルダに書き換えてください
-# 例: Exec=bash -c 'cd $HOME/デスクトップ/Wisper && bash launch.sh'
+Name=MMV Voice Tool
+Comment=Whisper transcription + MMV 12B QAT formatting
+# Change this path to the folder where you placed the tool
+# Example: Exec=bash -c 'cd $HOME/デスクトップ/Wisper && bash launch.sh'
 Exec=bash -c 'cd $HOME/デスクトップ/Wisper && bash launch.sh'
 Icon=audio-headset
 Terminal=false

@@ -1,4 +1,4 @@
-# 私的音声・生成物 — 絶対にコミットしない
+# Private audio and generated outputs — never commit
 *.m4a
 *.wav
 *.mp3
@@ -8,7 +8,7 @@
 *.txt.out
 transcripts/
 
-# ローカル退避・旧構成
+# Local backups and legacy configuration
 backup/
 launch.bat
 *.bak*
@@ -17,6 +17,12 @@ launch.bat
 __pycache__/
 *.pyc
 
-# 環境・秘密情報
+# Environment and secrets
 .env
 .env.*
+
+# Model weights / local validation outputs
+*.gguf
+.venv/
+eval/reference_*.csv
+eval/results_*

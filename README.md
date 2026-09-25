@@ -1,184 +1,271 @@
-# mmv-voice — Whisper large-v3-turbo + MMV 音声整形パイプライン
+---
+title: MMV Voice
+emoji: 🎙️
+colorFrom: purple
+colorTo: indigo
+sdk: static
+app_file: index.html
+pinned: false
+license: agpl-3.0
+short_description: Whisper transcription + local Gemma punctuation with a preservation check
+---
 
-> Governance-mediated voice pipeline: Whisper transcription + MMV-governed
-> formatting, chunk-level fidelity verification, speaker attribution, minutes,
-> and secretary digest output. A sibling of
-> [mobius-style/mmv](https://github.com/mobius-style/mmv) — every LLM call goes
-> through the frozen MMV governance stack, never a raw API.
+*The block above is Hugging Face Space metadata; it is not application configuration.*
 
-音声ファイルをローカル完結で「検証済みの構造化テキスト」に変換するパイプライン。
-**マルチランゲージ対応**: Whisperが言語を自動判定し(約100言語)、判定結果に
-応じて後段の指示文・話者ラベル(話者N / Speaker N)・議事メモ構成が切り替わる。
-日本語は専用指示、その他言語は「入力と同じ言語で出力」指示で処理される。
+# mmv-voice — Whisper large-v3-turbo + MMV formatting pipeline
 
-1. **文字起こし**: Whisper `large-v3-turbo`(GPU、言語自動判定)。生ログを左ペインにリアルタイム表示。
-2. **話者分離**: pyannote が使える環境なら音声ベース、なければ MMV 経由の
-   テキスト帰属に自動フォールバック。「話者1: / 話者2:」形式のターンに構造化。
-3. **整形**: **MOBIUS MMV Medium ハーネス経由**の `gemma4:12b`(Ollama)。
-   route_transformer + post_validator + force_reanchor_v2 の凍結ガバナンス
-   スタック(MMV-M-RC3.3)を通して、フィラー除去・句読点/段落整形を行う。
-4. **忠実性検証**: 整形文が原文の意味内容を保存しているか(脱落・追加・
-   過度な要約・意味変化)をチャンク毎に MMV 経由で検査し、疑わしい
-   チャンクに ⚠️ マーカーを付け、検証レポートを出力する。
-5. **議事メモ生成**: 概要/主な論点/決定事項/TODO の Markdown 議事メモを生成。
-6. **秘書digest出力**: ボタン一つで MOBIUS 秘書システムの
-   `addons/secretary/state/digests/voice_note_<ts>.md` に保存し、
-   音声を秘書エコシステムの入力チャネルにする。
+> Governance-mediated voice pipeline: Whisper transcription, MMV-governed
+> formatting, optional speaker attribution, fidelity check, minutes and
+> secretary-digest output. A sibling of
+> [mobius-style/mmv](https://github.com/mobius-style/mmv) — every LLM call
+> goes through the MMV harness, never a raw API.
 
-話者分離・忠実性検証・議事メモはGUIのチェックボックスで個別にON/OFF可能。
+A Linux desktop GUI (Tk) that turns an audio file into verified, structured
+text on your own machine. Whisper detects the language automatically
+(about 100 languages); Japanese gets dedicated instructions, other languages
+are processed with "reply in the same language as the input" instructions.
 
-## MMVエンジン切替（ローカル ⇔ クラウド120B）
+**v0.2 (2026-09-25) — local formatting engine replaced.** The default
+formatter is now a *minimal-edit* formatter: it asks a local
+`gemma4:12b-it-qat` (Ollama, via the MMV harness) to insert punctuation and
+line breaks only, then **rejects any candidate whose words or numbers
+changed** and keeps the raw transcript for that chunk instead. Measured
+results and their limits are in [MMV_FORMAT_STATUS.md](MMV_FORMAT_STATUS.md).
+This is a **local trial build**: no fine-tuning, no claim of general model
+quality, small read-speech test panels only. The previous release is
+preserved as tag `v0.1`.
 
-処理エンジン(話者帰属・整形・検証・議事メモの全MMV段)をGUIのラジオボタンで
-切り替えられる:
+## What it does
 
-| エンジン | モデル | 実行場所 | 用途 |
+1. **Transcription** — Whisper `large-v3-turbo` (GPU when available,
+   language auto-detected). The raw log streams into the left pane.
+2. **Formatting (default engine: MMV-Format, local)** — punctuation and
+   paragraph breaks only. Each chunk's candidate must pass a
+   lexical/numeric preservation check; otherwise the unformatted source is
+   retained and the "Verification report" tab shows source, candidate and
+   rejection reason.
+3. **Speaker attribution (optional, off by default)** — pyannote.audio if
+   installed and gated models are approved; otherwise text-based
+   attribution through MMV. Output is structured as `Speaker 1: …` turns
+   (`話者1:` for Japanese). Unattributable utterances stay visibly
+   `Speaker unknown`.
+4. **Fidelity check (optional, off by default)** — an additional LLM pass
+   comparing each source/formatted pair; suspicious chunks get a ⚠️ marker.
+5. **Minutes (optional, off by default)** — Markdown minutes
+   (summary / key points / decisions / action items) from the formatted
+   text, first 24,000 characters.
+6. **Secretary digest** — one button writes
+   `voice_note_<ts>.md` into the MOBIUS secretary digest directory with
+   metadata, source/candidate/reason audit and `human_verified: false`.
+
+## Engines
+
+| Engine | Model | Runs on | Purpose |
 |---|---|---|---|
-| **MMV-M**(既定) | gemma4:12b | ローカル(Ollama) | プライバシー重視・通常運用 |
-| **MMV-L**(任意) | gpt-oss-120b | **Groqクラウド** | 話者帰属・整形の精度重視 |
+| **MMV-Format** (default) | `gemma4:12b-it-qat` (Ollama) | local | punctuation-only formatting with preservation check |
+| **MMV-L** (opt-in) | `gpt-oss-120b` via Groq | **cloud** | legacy path; sends transcript text off-machine after an explicit confirmation dialog |
 
-- どちらも `releases/<medium|large>/current.yaml` のリリースポインタから
-  束縛を読み、凍結ガバナンススタック(route_transformer + post_validator +
-  force_reanchor_v2)を通る。「MMVの状態」はどちらでも維持される。
-- MMV-L 選択時は**文字起こしテキストがGroqへ送信される**ため、選択の瞬間に
-  確認ダイアログが出る(既定は常にローカルM)。
-- `GROQ_API_KEY` は環境変数 → `MOBIUS_MMV/.env` の順で自動解決。
-  どちらにも無い場合は MMV-L のボタンが無効化される。
-- digest には使用エンジンが `formatter:` 行に記録される。
+- MMV-Format uses the profile shipped in this repository
+  (`profiles/mmv_format_12b_qat.json`): MMV `route_transformer`,
+  `post_validator` and `force_reanchor_v2` stay on, temperature 0,
+  `num_ctx` 8192, `max_tokens` 1024, `think: false`. The canonical MMV
+  release profiles are not modified.
+- Before the first call, the tool checks that the Ollama model tag **and
+  digest** match the evaluated build
+  (`38044be4f923e5a55264ed7df4eaac2676651a905f735197c504045140c02bd3`).
+  On mismatch it does not generate and keeps the source text; it never
+  silently falls back to another model.
+- Normally one generation request per chunk, no quality-driven
+  regeneration. The harness's own retry on transport/empty-response errors
+  (max 1) remains.
+- Input is split at about 1,000 characters without cutting an ASCII word or
+  a numeric expression; the split is checked to reconstruct the original
+  string exactly. An oversized single token is retained unformatted rather
+  than cut.
+- MMV-L reads its binding from the MMV release pointer
+  (`operate-fr-bench/releases/large/current.yaml`) and needs
+  `GROQ_API_KEY` (environment or `MOBIUS_MMV/.env`). Without it the
+  cloud radio button is disabled. The digest records which engine was used.
 
-## フォルダ構成
+**This is not a transcription-error corrector.** A candidate that fixes a
+misheard word is still rejected because the words changed. Punctuation can
+change meaning, and the preservation check does not prove semantic
+fidelity. Typo correction, summarisation and speaker attribution are
+separate problems. Languages other than Japanese and English are
+unevaluated.
+
+## Measured results (summary)
+
+From [MMV_FORMAT_STATUS.md](MMV_FORMAT_STATUS.md), FLEURS read speech,
+Whisper large-v3-turbo, 3 repeats per clip at temperature 0:
+
+| Panel | Candidate acceptance | Actually formatted | Source retained | Punctuation-position F1 vs reference |
+|---|---:|---:|---:|---:|
+| Japanese, 12 new clips, v2 prompt | 91.7% (33/36) | 30/36 | 3/36 | 0.857 |
+| Japanese, same clips, previous v1 prompt | 83.3% (30/36) | 24/36 | 6/36 | 0.857 |
+| English, 8 clips (regression, 1 run) | 8/8 | 6/8 | 0/8 | — |
+
+Acceptance means the candidate passed the preservation check, not that its
+punctuation is correct. The post-hoc punctuation-position F1 is identical
+for v1 and v2 (paired delta +0.001, bootstrap 95% CI [−0.089, +0.088]); v2
+misses fewer sentence ends but inserts more commas than the reference. The
+panels are small; none of this is a population guarantee. The 2026-09-24
+trial that was put on HOLD is kept unchanged in
+[eval/mmv_format_12b_qat_20260924.md](eval/mmv_format_12b_qat_20260924.md).
+
+## Repository layout
 
 ```
-Wisper/
-├── whisper_gui.py        # メインプログラム
-├── launch.sh             # 起動ファイル(Ollama自動起動 → GUI起動)
-├── whisper_tool.desktop  # Linux デスクトップアイコン用(launch.sh を呼ぶ)
-├── requirements.txt      # Python パッケージ一覧
-├── LICENSE               # AGPL-3.0
-└── README.md             # このファイル
+mmv-voice/
+├── whisper_gui.py                 # GUI and pipeline
+├── voice_mmv.py                   # MMV-Format engine: prompts, preservation check, splitting, audit
+├── profiles/mmv_format_12b_qat.json
+├── tests/test_mmv_formatter.py    # boundary and preservation tests (HTTP fixture, real harness path)
+├── eval/                          # measured trials and raw metrics (JSON)
+├── MMV_FORMAT_STATUS.md           # current adoption status and measurements
+├── launch.sh / whisper_tool.desktop
+├── requirements.txt
+├── LICENSE                        # AGPL-3.0
+└── README.md
 ```
 
-ローカル作業フォルダには上記に加えて `backup/`(旧構成の退避)、
-`launch.bat`(旧Windows用)、テスト音声(*.m4a)があるが、これらは
-git 管理外(.gitignore)。**音声ファイルは絶対にコミットしないこと。**
+Private audio, transcripts and local backups are ignored by `.gitignore`.
+**Never commit audio files.**
 
-## 動作環境(検証済み構成)
+## Requirements and tested environment
 
-| 項目 | 内容 |
+| Item | Tested with |
 |---|---|
-| GPU | NVIDIA RTX 5070 Ti (16GB) |
-| Python | pyenv 3.10.14 (`~/.pyenv/versions/3.10.14/bin/python3`) |
-| PyTorch | 2.10.0+cu128(Blackwell対応) |
+| OS | Linux (Tk desktop) |
+| GPU | 2 × NVIDIA RTX 5070 Ti (16 GB); Ollama on GPU 0, Whisper on GPU 1 |
+| Python | 3.10.14 (pyenv) |
+| PyTorch | 2.10.0 + cu128 (Blackwell needs cu128 or newer) |
 | Whisper | openai-whisper 20250625 |
-| LLM | Ollama + `gemma4:12b`(7.6GB) |
-| MMVハーネス | `~/デスクトップ/mobius_ai/MOBIUS_MMV/operate-fr-bench` |
+| LLM | Ollama + `gemma4:12b-it-qat` (7.2 GB, Q4_0 QAT) |
+| MMV harness | [mobius-style/mmv](https://github.com/mobius-style/mmv), `operate-fr-bench/harness/adapters.py` |
 
-実測(音声60秒あたり): 文字起こし 約2.3秒、話者帰属 約6秒、整形 約5秒、
-忠実性検証 約1秒/チャンク、議事メモ 約3秒。
+A single 16 GB GPU also works: Whisper is loaded only after the free VRAM
+threshold (`MIN_FREE_VRAM_GB`, default 7 GB) is met, falls back to CPU
+after a 30 s wait, and is released before formatting starts. The launcher
+does **not** start or stop Ollama; an inference server belongs to whoever
+started it.
 
-## 忠実性検証・議事メモ・digest出力
-
-- **忠実性検証**: 整形チャンク毎に「原文 vs 整形文」を MMV 経由で比較判定。
-  NG判定のチャンクは整形済みタブで `⚠️【要確認 チャンクN: 理由】` と
-  マークされ、「検証レポート」タブに全チャンクの判定一覧が出る。
-  LLM整形の弱点である「黙った改変」をローカルで検出する層。
-- **議事メモ**: 「議事メモ」タブに Markdown で出力。該当がない節は
-  「(なし)」となる(本文にない事柄は追加しない指示付き)。
-- **秘書digest**: 処理完了後に「📤 秘書digestへ保存」ボタンが有効になる。
-  保存先は `MOBIUS_MMV/addons/secretary/state/digests/voice_note_<ts>.md`。
-  メタデータ(音源・モデル・話者バックエンド・検証サマリ)+議事メモ+
-  整形本文+検証レポートを1ファイルに収める。
-
-## 話者分離のバックエンド
-
-| バックエンド | 条件 | 品質 |
-|---|---|---|
-| pyannote.audio(音声ベース) | `pip install pyannote.audio` + HFで `pyannote/speaker-diarization-3.1` と `segmentation-3.0` のゲート承認 | 高(声質で判定) |
-| MMVテキスト帰属(既定) | 追加設定不要 | 中(発話内容から推定) |
-
-pyannote は起動時ではなく処理時に自動検出され、失敗すれば黙って
-テキスト帰属にフォールバックする(現環境はゲート未承認のためテキスト帰属)。
-
-## MMV連携の仕組み
-
-- モデル束縛はハードコードせず、起動時にMMVのリリースポインタ
-  `operate-fr-bench/releases/medium/current.yaml` から読む
-  (現行: MMV-M-RC3.3 / gemma4:12b、2026-06-06 モデル束縛更新)。
-  MMV側で束縛が更新されれば本ツールも自動追従する。
-- 整形は `harness.adapters.call_adapter` を直接呼ぶ。凍結プロファイル
-  (`gemma4_12b_route_transformer_plus_validator_v3_1`)には一切手を加えない。
-- プロファイルは `max_tokens=1024` で凍結されているため、長い文字起こしは
-  文末境界で約1000字ずつに分割して整形する(`FORMAT_CHUNK_CHARS`)。
-  チャンクの整形に失敗した場合は未整形の原文をそのまま残す。
-- MMVハーネスが読み込めない場合、整形は無効化されエラー表示になる
-  (素のGemmaへの無言フォールバックはしない)。
-
-## VRAM運用(16GB 1枚での共存)
-
-Whisper と LLM は同時には載せず、順次スワップする:
-
-1. Whisper実行前に Ollama へ `keep_alive: 0` を送り gemma4:12b をアンロード
-2. 空きVRAMが 7GB(`MIN_FREE_VRAM_GB`)を超えるまで待機(最大30秒)、
-   確保できなければCPUフォールバック
-3. 文字起こし完了後、Whisperモデルを解放してからMMV整形を開始
-
-## 起動方法
+## Setup
 
 ```bash
-bash launch.sh        # Ollama serve の自動起動込み
+# 1. system packages
+sudo apt install ffmpeg python3-tk
+# 2. PyTorch matching your CUDA (Blackwell example)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+# 3. Python packages (openai-whisper, requests, pyyaml, rcgov)
+pip install -r requirements.txt
+# 4. Ollama and the evaluated model (network and disk required, once)
+ollama serve            # in another terminal, if not already running as a service
+ollama pull gemma4:12b-it-qat
+# 5. the MMV harness
+git clone https://github.com/mobius-style/mmv ~/MOBIUS_MMV
+export MMV_REPO=~/MOBIUS_MMV
 ```
 
-またはデスクトップアイコン(`音声整形ツール`)をダブルクリック。
+Optional: `pip install pyannote.audio` and accept the Hugging Face gates
+for `pyannote/speaker-diarization-3.1` and `pyannote/segmentation-3.0` for
+audio-based speaker attribution.
 
-## セットアップ(新規マシンの場合)
-
-1. Ollama をインストールし `ollama pull gemma4:12b`
-2. `sudo apt install ffmpeg`
-3. Blackwell世代GPUの場合は CUDA 12.8 対応 PyTorch を入れる:
-   `pip install torch --index-url https://download.pytorch.org/whl/cu128`
-4. `pip install -r requirements.txt`(openai-whisper / requests / pyyaml)
-5. [MOBIUS_MMV リポジトリ](https://github.com/mobius-style/mmv)を配置し、
-   場所が既定(`~/デスクトップ/mobius_ai/MOBIUS_MMV`)と異なる場合は
-   環境変数 `MMV_REPO` でパスを指定する
-
-## 設定の切り替え
-
-`whisper_gui.py` 冒頭の定数で変更する:
-
-| 定数 | 既定値 | 用途 |
-|---|---|---|
-| `WHISPER_MODEL_SIZE` | `large-v3-turbo` | 精度優先なら `large-v3`(約4.7倍遅い・要VRAM 11GB) |
-| `WHISPER_LANGUAGE` | `None`(自動判定) | `"ja"` 等で言語を固定可能 |
-| `MIN_FREE_VRAM_GB` | `7.0` | `large-v3` にするなら `11.0` に上げる |
-| `FORMAT_CHUNK_CHARS` | `1000` | MMV整形1回あたりの最大入力文字数 |
-
-補足: MMVの route_transformer は英語ベンチ由来の検知パターンを持ち、英語の
-日常会話では再アンカー足場文が出力冒頭に復唱されることがある。本ツールは
-その復唱部のみを成果物から除去する(`_strip_governance_scaffold`)。凍結
-ハーネス自体には手を加えない。
-
-## よくあるエラー
-
-| エラー | 原因 | 対処 |
-|---|---|---|
-| `Ollama未起動` | ollama serve 未起動 | launch.sh が自動起動する |
-| `モデル [gemma4:12b] が見つかりません` | モデル未取得 | `ollama pull gemma4:12b` |
-| `MMVハーネスを読み込めません` | MMV_REPO パス不正 / MMVリポジトリ移動 | `whisper_gui.py` の `MMV_REPO` を修正 |
-| `No module named 'whisper'` | パッケージ未インストール | `pip install -r requirements.txt` |
-| `ffmpeg not found` | ffmpeg 未インストール | `sudo apt install ffmpeg` |
-| `CUDA out of memory` | VRAM不足 | 他のGPUアプリを閉じてから起動 |
-
-## 旧構成に戻す場合
+## Run
 
 ```bash
-cp backup/whisper_gui.py.bak_qwen_20260704 whisper_gui.py
+bash launch.sh
 ```
 
-(Whisper medium + Qwen3.5:9b 直叩き構成。2×RTX 3070 時代のもの)
+or install `whisper_tool.desktop` (edit its `Exec=` path) and use the
+desktop icon. Pick an audio file; transcription starts immediately and
+formatting follows. "Stop Whisper → format" formats what has been
+transcribed so far.
+
+## Configuration
+
+Environment variables:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `MMV_REPO` | `~/デスクトップ/mobius_ai/MOBIUS_MMV` | path of the MMV repository (harness + release pointers + digest dir) |
+| `MMV_FORMAT_HOST` | `http://127.0.0.1:11434` | Ollama endpoint for MMV-Format; **loopback HTTP only**, anything else is refused |
+| `WISPER_PYTHON` | pyenv 3.10.14, then auto-detect | interpreter used by `launch.sh` |
+| `GROQ_API_KEY` | — | only for the opt-in MMV-L cloud engine |
+
+Constants at the top of `whisper_gui.py`:
+
+| Constant | Default | Meaning |
+|---|---|---|
+| `WHISPER_MODEL_SIZE` | `large-v3-turbo` | `large-v3` is more accurate, ~4.7× slower, needs ~11 GB |
+| `WHISPER_LANGUAGE` | `None` (auto) | e.g. `"ja"` to pin the language |
+| `MIN_FREE_VRAM_GB` | `7.0` | raise to `11.0` for `large-v3` |
+| `FORMAT_CHUNK_CHARS` | `1000` | maximum characters per formatting request |
+
+If the MMV harness or the formatting profile cannot be loaded, formatting
+is disabled with a visible error; there is no silent fallback to a raw
+model call.
+
+## Verification report, minutes and digest
+
+- **Verification report tab** — for every chunk: status (formatted /
+  unchanged / source retained), reason, source text and model candidate.
+  With the optional fidelity check on, the LLM verdicts are appended and
+  flagged chunks are marked `⚠️` in the formatted text.
+- **Minutes tab** — Markdown; sections without content read "(none)"; the
+  instruction forbids adding anything not in the transcript.
+- **Secretary digest** — written to
+  `$MMV_REPO/addons/secretary/state/digests/voice_note_<ts>.md` with
+  source audio, language, engine, profile path, speaker backend, fidelity
+  summary and `human_verified: false`.
+
+## Tests
+
+```bash
+python3 -m pytest -q tests/
+```
+
+Covers the real harness path through a local HTTP fixture, rejection of
+word/number changes, model-digest mismatch, exception handling that keeps
+the exact source, splitting without cutting tokens, refusal of non-loopback
+endpoints, and digest provenance. Passing tests are not a claim about
+formatting quality; that comes only from held-out audio trials recorded in
+`eval/`.
+
+## Troubleshooting
+
+| Message | Cause | Fix |
+|---|---|---|
+| `MMV not connected` | Ollama not running | start `ollama serve` (or the system service) |
+| `gemma4:12b-it-qat with measured digest … is required` | model missing or a different build | `ollama pull gemma4:12b-it-qat`; a different digest is outside the evaluated configuration |
+| `MMV configuration error` | `MMV_REPO` wrong or harness moved | set `MMV_REPO` |
+| `MMV_FORMAT_HOST must be a loopback HTTP origin` | remote endpoint configured | use `http://127.0.0.1:<port>` |
+| `No module named 'whisper'` | packages not installed | `pip install -r requirements.txt` |
+| `ffmpeg not found` | ffmpeg missing | `sudo apt install ffmpeg` |
+| `CUDA out of memory` | not enough VRAM | close other GPU applications, or let the tool fall back to CPU |
+
+## Versions
+
+| Tag | Date | Content |
+|---|---|---|
+| `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2` | 2026-09-25 | default engine replaced by MMV-Format (punctuation-only, preservation check, digest pinning, audit in report); speaker / fidelity / minutes now off by default; English documentation; measured trials in `eval/` |
+
+The v0.1 formatter rewrote text (filler removal, spoken-to-written style)
+and relied on an LLM fidelity check to catch silent changes. v0.2 inverts
+that: the model may only add punctuation, and a deterministic check
+enforces it. If you need the old behaviour, check out tag `v0.1`.
+
+## Privacy
+
+Everything runs locally by default. Text leaves the machine only when
+MMV-L is selected, and only after a confirmation dialog. No audio,
+transcripts or digests are part of this repository.
 
 ## License
 
-AGPL-3.0 — Copyright (C) 2025-2026 MOBIUS LLC (Author: Taiko Toeda)。
-[mobius-style/mmv](https://github.com/mobius-style/mmv) の兄弟プロジェクト。
-MMVハーネス本体・凍結プロファイル・リリースポインタは mmv リポジトリ側の
-成果物であり、本リポジトリはそれを呼び出すアプリケーション層のみを含む。
+AGPL-3.0 — Copyright (C) 2025-2026 MOBIUS LLC (author: Taiko Toeda).
+Sibling of [mobius-style/mmv](https://github.com/mobius-style/mmv). The MMV
+harness, frozen profiles and release pointers are artefacts of the mmv
+repository; this repository contains only the application layer that calls
+them.

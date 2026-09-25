@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MMV Voice</title>
+<meta name="description" content="Whisper transcription plus local Gemma punctuation with a deterministic preservation check. Source, tests and measured trials.">
+<style>
+  :root { --bg:#ffffff; --fg:#1d1d1f; --muted:#5c5c66; --line:#e4e4ea; --accent:#5b3fa0; --code:#f4f3f8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#141418; --fg:#ececf1; --muted:#a2a2ad; --line:#2c2c34; --accent:#b9a3f0; --code:#1f1f26; } }
+  :root[data-theme="dark"] { --bg:#141418; --fg:#ececf1; --muted:#a2a2ad; --line:#2c2c34; --accent:#b9a3f0; --code:#1f1f26; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:40px 16px 64px; }
+  h1 { font-size:1.9rem; margin:0 0 4px; }
+  .lead { color:var(--muted); margin:0 0 28px; }
+  h2 { font-size:1.15rem; margin:32px 0 8px; }
+  p, li { margin:0 0 8px; }
+  ul { padding-left:20px; }
+  a { color:var(--accent); }
+  code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:.92em; }
+  table { border-collapse:collapse; width:100%; margin:8px 0 12px; font-size:.95rem; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.num, th.num { text-align:right; white-space:nowrap; }
+  .links a { display:inline-block; margin:4px 12px 4px 0; }
+  .note { border-left:3px solid var(--accent); padding:8px 12px; background:var(--code); border-radius:0 6px 6px 0; }
+  footer { margin-top:40px; color:var(--muted); font-size:.9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>MMV Voice</h1>
+  <p class="lead">Whisper transcription → local Gemma punctuation → a deterministic check that rejects any change to words or numbers. Linux desktop GUI, AGPL-3.0, no fine-tuning.</p>
+
+  <p class="links">
+    <a href="https://github.com/mobius-style/mmv-voice">Source on GitHub</a>
+    <a href="README.md">README</a>
+    <a href="MMV_FORMAT_STATUS.md">Measured status (2026-09-25)</a>
+    <a href="eval/mmv_format_12b_qat_20260924.md">Earlier trial on HOLD (2026-09-24)</a>
+  </p>
+
+  <h2>What it does</h2>
+  <ul>
+    <li>Transcribes with Whisper <code>large-v3-turbo</code>, language auto-detected.</li>
+    <li>Asks a local <code>gemma4:12b-it-qat</code> (Ollama, through the MMV harness) to insert punctuation and line breaks <em>only</em>.</li>
+    <li>Rejects every candidate whose words or numbers differ from the transcript and keeps the raw text for that chunk; the report shows source, candidate and reason.</li>
+    <li>Checks the Ollama model digest before the first call; a different build is not used silently.</li>
+    <li>Optional, off by default: speaker attribution, an LLM fidelity pass, minutes, secretary digest export. An opt-in cloud engine exists and asks before sending anything off-machine.</li>
+  </ul>
+
+  <h2>Measured on FLEURS read speech</h2>
+  <table>
+    <thead><tr><th>Panel</th><th class="num">Candidate accepted</th><th class="num">Source retained</th><th class="num">Punctuation-position F1</th></tr></thead>
+    <tbody>
+      <tr><td>Japanese, 12 new clips × 3, v2 prompt</td><td class="num">91.7% (33/36)</td><td class="num">3/36</td><td class="num">0.857</td></tr>
+      <tr><td>Japanese, same clips, previous v1 prompt</td><td class="num">83.3% (30/36)</td><td class="num">6/36</td><td class="num">0.857</td></tr>
+      <tr><td>English, 8 clips, regression</td><td class="num">8/8</td><td class="num">0/8</td><td class="num">—</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Acceptance means the candidate passed the preservation check, not that its punctuation is right. The position-accuracy metric is identical for both prompts (paired delta +0.001, 95% CI [−0.089, +0.088]). Small panels, read speech, no population guarantee. Details and failure cases are in the status report.</p>
+
+  <h2>What it is not</h2>
+  <p>It does not correct transcription errors — a candidate that fixes a misheard word is rejected because the words changed. Punctuation can still alter meaning; the check does not prove semantic fidelity. Languages other than Japanese and English are unevaluated.</p>
+
+  <h2>Run it</h2>
+  <p>Linux, Python 3.10, PyTorch with CUDA, ffmpeg, Ollama with <code>gemma4:12b-it-qat</code>, and the <a href="https://github.com/mobius-style/mmv">MMV harness</a>. Setup steps, configuration and troubleshooting are in the <a href="README.md">README</a>.</p>
+
+  <footer>Copyright © 2025-2026 MOBIUS LLC · Taiko Toeda · AGPL-3.0 · This page is a static mirror of the GitHub repository; the source tree here is byte-identical to the tagged release.</footer>
+</main>
+</body>
+</html>

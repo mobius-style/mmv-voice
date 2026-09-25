@@ -1,0 +1,178 @@
+{
+  "winner": "B",
+  "calibration": {
+    "oracle_pairs": 225,
+    "controls": "exact, punctuation, substitution, insertion, deletion, digit change, omission, addition: passed"
+  },
+  "languages": {
+    "ja": {
+      "raw": {
+        "cer": 0.055186974594236715
+      },
+      "A": {
+        "cer": 0.13500359669540282,
+        "median_seconds": 2.8179123900044942,
+        "statuses": {
+          "baseline_unchecked": 24
+        }
+      },
+      "A_raw": {
+        "cer": 0.13500359669540282
+      },
+      "candidate": {
+        "cer": 0.04611322314243649
+      },
+      "delivered": {
+        "cer": 0.055186974594236715
+      },
+      "B": {
+        "median_seconds": 2.657456821492815,
+        "statuses": {
+          "formatted": 9,
+          "source_retained": 9,
+          "unchanged": 6
+        }
+      },
+      "delta_delivered_minus_A": {
+        "mean": -0.07981662210116611,
+        "ci95": [
+          -0.13118718641302676,
+          -0.034168741938462734
+        ]
+      },
+      "acceptance": 0.625,
+      "gate": false
+    },
+    "en": {
+      "raw": {
+        "cer": 0.05006686969092756
+      },
+      "A": {
+        "cer": 0.2081632863111172,
+        "median_seconds": 2.1464072960079648,
+        "statuses": {
+          "baseline_unchecked": 24
+        }
+      },
+      "A_raw": {
+        "cer": 0.6024756584992562
+      },
+      "candidate": {
+        "cer": 0.05006686969092756
+      },
+      "delivered": {
+        "cer": 0.05006686969092756
+      },
+      "B": {
+        "median_seconds": 2.029042957488855,
+        "statuses": {
+          "formatted": 21,
+          "unchanged": 3
+        }
+      },
+      "delta_delivered_minus_A": {
+        "mean": -0.15809641662018964,
+        "ci95": [
+          -0.3792138408626139,
+          0.0036745910020449897
+        ]
+      },
+      "acceptance": 1.0,
+      "gate": true
+    }
+  },
+  "freeze": {
+    "phase": "dev_r2",
+    "variant": "B",
+    "accepted": 21,
+    "useful": 7,
+    "cer": 0.05575641246380972,
+    "raw": 0.05575641246380972,
+    "median_seconds": 1.860511803002737,
+    "eligible": true,
+    "timestamp": "2026-09-24T21:52:49.443703+09:00",
+    "hashes": {
+      "formatter_candidate.py": "36f483a24218580768554fc9dc1e5a2c2b40fbe188b061fbcafd63fb83d8d176",
+      "original_profile.json": "2a89005267a907e035c12e2c4cdc538887b65698591ac6080ff85897bfa51731",
+      "eval_holdout.py": "a704de5d05627cd342c89a337ee76ce89fdc1d1d25f928375aefd6e092f7c45d",
+      "holdout/samples.json": "e5cffa6ba310ac32498fecac12c71cf2f39b15d859635cb3ca5530f43a693c65",
+      "PLAN.md": "c435ef70e17c888269a06d0ce51da4eb534d2a6d37cc4d34da0e348c2c5b7ad6"
+    }
+  },
+  "controls": [
+    {
+      "source": "今日は雨です 明日は晴れです",
+      "candidate": "今日は雨です。明日は晴れです。",
+      "text": "今日は雨です。明日は晴れです。",
+      "status": "formatted",
+      "accepted": true,
+      "reason": "lexical_postcondition_passed",
+      "seconds": 2.0232685709925136,
+      "backend_error": null,
+      "route_family": "query_neutrality",
+      "route_injected": false,
+      "post_rewritten": false,
+      "tokens_in": 127,
+      "tokens_out": 11,
+      "lang": "ja",
+      "id": "control_0",
+      "kind": "synthetic"
+    },
+    {
+      "source": "えー 参加者は12名です 資料は3枚です",
+      "candidate": "えー、参加者は12名です。資料は3枚です。",
+      "text": "えー、参加者は12名です。資料は3枚です。",
+      "status": "formatted",
+      "accepted": true,
+      "reason": "lexical_postcondition_passed",
+      "seconds": 1.4323773099895334,
+      "backend_error": null,
+      "route_family": "query_neutrality",
+      "route_injected": false,
+      "post_rewritten": false,
+      "tokens_in": 133,
+      "tokens_out": 17,
+      "lang": "ja",
+      "id": "control_1",
+      "kind": "synthetic"
+    },
+    {
+      "source": "We arrived on Tuesday the event starts on Wednesday",
+      "candidate": "We arrived on Tuesday; the event starts on Wednesday.",
+      "text": "We arrived on Tuesday; the event starts on Wednesday.",
+      "status": "formatted",
+      "accepted": true,
+      "reason": "lexical_postcondition_passed",
+      "seconds": 1.785172446994693,
+      "backend_error": null,
+      "route_family": "query_neutrality",
+      "route_injected": false,
+      "post_rewritten": false,
+      "tokens_in": 114,
+      "tokens_out": 12,
+      "lang": "en",
+      "id": "control_2",
+      "kind": "synthetic"
+    },
+    {
+      "source": "um the cost is 45 dollars uh we will pay tomorrow",
+      "candidate": "Um, the cost is 45 dollars; uh, we will pay tomorrow.",
+      "text": "um the cost is 45 dollars uh we will pay tomorrow",
+      "status": "source_retained",
+      "accepted": false,
+      "reason": "content_changed",
+      "seconds": 1.497056669992162,
+      "backend_error": null,
+      "route_family": "query_neutrality",
+      "route_injected": false,
+      "post_rewritten": false,
+      "tokens_in": 118,
+      "tokens_out": 18,
+      "lang": "en",
+      "id": "control_3",
+      "kind": "synthetic"
+    }
+  ],
+  "useful_controls": 3,
+  "gate": "HOLD"
+}

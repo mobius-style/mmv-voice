@@ -7,7 +7,7 @@ sdk: static
 app_file: index.html
 pinned: false
 license: agpl-3.0
-short_description: Local-first speech-to-text: Whisper + on-device Gemma
+short_description: "Local-first speech-to-text: Whisper + on-device Gemma"
 ---
 
 *The block above is Hugging Face Space metadata; it is not application configuration.*
@@ -251,7 +251,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
-| `v0.2.1` | 2026-09-25 | documentation only: local-first wording, Hugging Face metadata |
+| `v0.2.2` | 2026-09-25 | documentation only: local-first wording, Hugging Face metadata (v0.2.1 had invalid Space metadata) |
 | `v0.2` | 2026-09-25 | default engine replaced by MMV-Format (punctuation-only, preservation check, digest pinning, audit in report); speaker / fidelity / minutes now off by default; English documentation; measured trials in `eval/` |
 
 The v0.1 formatter rewrote text (filler removal, spoken-to-written style)

@@ -103,6 +103,47 @@ cannot fix words that Whisper itself misheard. One consequence: if the model
 changes capitalisation (for example on an all-lowercase English input), the
 chunk falls back to Whisper's text unformatted.
 
+## Readable draft mode (opt-in, review required)
+
+Since v0.2.8 the "Optional steps" dialog has a checkbox **Readable draft
+instead of punctuation only**. It is off by default and changes the contract
+for that job:
+
+- The local model may rewrite for readability: punctuation, paragraphs,
+  grammar, meaningless fillers and repeats, explicit self-corrections.
+- **The word-and-number guarantee above does not apply.** Instead the prompt
+  puts "no unsupported guesses" before fluency: names, places, terms and
+  unclear words must be kept as heard and followed by the marker `（※要確認）`
+  ("please verify", deliberately identical in English, Japanese and Chinese).
+  Three deterministic rules (changed numerals, changed negation words,
+  changed uncertainty words) append the same marker at the end of the chunk
+  when they fire; they are warnings, not proof either way.
+- The original text, the raw model candidate, a diff and the rule flags stay
+  in the Review tab; the digest records `format_mode: readable` and
+  `human_verified: false`. Every readable result needs human review — the
+  status line says so.
+- Chunks are split at sentence ends where possible (source reconstructed
+  exactly); the model is `gemma4:12b-it-qat` by default, or the
+  digest-pinned `gemma4:26b-a4b-it-qat` with `MMV_READABLE_MODEL`. MMV's
+  question routing, post-validator and re-anchor scaffold are off for this
+  path; the endpoint stays loopback-only.
+
+Measured on 38 known inputs (24 FLEURS transcripts, 2 meeting excerpts, 12
+synthetic; English, Japanese, Chinese) × 3 repeats × 12B/26B: the five known
+unsupported substitutions of the previous readable build (a guessed city
+name, a changed person name, an invented physics term, `cooches` → `couches`)
+went from 9/15 to 0/15 on both models; 41/114 (12B) and 51/114 (26B) outputs
+carried at least one marker (the shipped build narrows the rule lexicon and
+raises the context window to 8192 after review, so rule-added chunk markers
+are rarer than in that measurement). Remaining failures: an unclear Chinese phrase
+deleted by 26B, a statement turned into a question by 12B, a wrong English
+person name and a Japanese `海外`/`海岸` confusion left unmarked, some
+over-marking of clear terms. This is a known-data, single-reviewer,
+exploratory regression — not an error rate. Automatic (unreviewed) adoption
+is on hold; the mode is offered for review-assisted use. Full report:
+[eval/mmv_readable_v2_20260926.md](eval/mmv_readable_v2_20260926.md); mode
+contract: [docs/READABLE_MODE.md](docs/READABLE_MODE.md).
+
 A sibling of [mobius-style/mmv](https://github.com/mobius-style/mmv): every
 LLM call goes through the MMV harness, never a raw API. v0.2 replaced the
 v0.1 rewrite-style formatter with this minimal-edit one; v0.1 remains
@@ -278,8 +319,11 @@ trial that was put on HOLD is kept unchanged in
 mmv-voice/
 ├── whisper_gui.py                 # GUI and pipeline
 ├── voice_mmv.py                   # MMV-Format engine: prompts, preservation check, splitting, audit
+├── voice_readable.py              # opt-in readable draft engine: sentence chunks, markers, diagnostics
+├── desktop_ui.py                  # Tk workspace layout
 ├── profiles/mmv_format_12b_qat.json
-├── tests/test_mmv_formatter.py    # boundary and preservation tests (HTTP fixture, real harness path)
+├── profiles/mmv_readable_*.json, profiles/readable_prompts.json
+├── tests/                         # formatter, readable-mode and desktop lifecycle tests
 ├── eval/                          # measured trials and raw metrics (JSON)
 ├── MMV_FORMAT_STATUS.md           # current adoption status and measurements
 ├── launch.sh / whisper_tool.desktop
@@ -356,6 +400,8 @@ Environment variables:
 | `MMV_FORMAT_HOST` | `http://127.0.0.1:11434` | Ollama endpoint for MMV-Format; **loopback HTTP only**, anything else is refused |
 | `WISPER_PYTHON` | pyenv 3.10.14, then auto-detect | interpreter used by `launch.sh` |
 | `GROQ_API_KEY` | — | only for the opt-in MMV-L cloud engine |
+| `MMV_FORMAT_MODE` | `verbatim` | `readable` pre-selects the readable-draft checkbox; any other value is refused |
+| `MMV_READABLE_MODEL` | `gemma4:12b-it-qat` | readable mode only; `gemma4:26b-a4b-it-qat` (digest-pinned) is the other supported tag |
 
 Constants at the top of `whisper_gui.py`:
 
@@ -417,6 +463,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.8` | 2026-09-26 | opt-in readable draft mode (`voice_readable.py`: rewrite for readability, `（※要確認）` markers for unclear spans, sentence-end chunking, 12B or digest-pinned 26B); default engine and its guarantee unchanged |
 | `v0.2.7` | 2026-09-26 | landing page: dark mode restored (follows the OS `prefers-color-scheme`; light unchanged) |
 | `v0.2.6` | 2026-09-26 | sidebar layout fix for HiDPI displays (cloud-engine choice was clipped at 1.33× scaling); v0.3 / v0.3b HOLD reports added to `eval/`; stale "being measured" wording and diagram label updated |
 | `v0.2.5` | 2026-09-26 | desktop UI refresh: one workspace (source and result side by side), main-thread event queue, sequential stop → release → format lifecycle, UTF-8 text export (Ctrl+O / Ctrl+S), elapsed time and explicit local/cloud state; responsive landing page. No change to prompts, profiles, validator or chunking |

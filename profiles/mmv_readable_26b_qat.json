@@ -1,0 +1,24 @@
+{
+  "backend": "ollama",
+  "endpoint": "http://localhost:11434",
+  "model_id": "gemma4:26b-a4b-it-qat",
+  "temperature": 0.0,
+  "max_tokens": 1024,
+  "timeout_s": 180,
+  "retry": 1,
+  "extra": {
+    "think": false,
+    "num_ctx": 8192
+  },
+  "route_transformer": false,
+  "post_validator": false,
+  "force_reanchor_v2": false,
+  "purity_guard": {
+    "require_backend": "ollama",
+    "require_model_substring": "gemma4",
+    "forbid_endpoint_substring": [
+      "api.groq.com",
+      "api.openai.com"
+    ]
+  }
+}

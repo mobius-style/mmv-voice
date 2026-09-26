@@ -153,7 +153,17 @@ class WorkspaceUI:
                  font=('DejaVu Sans', 14, 'bold')).pack(anchor='w', pady=(0, 14))
         for title, var in [('Attribute speakers', self.opt_speaker), ('Extra fidelity check', self.opt_fidelity), ('Generate meeting notes', self.opt_minutes)]:
             ttk.Checkbutton(frame, text=title, variable=var).pack(anchor='w')
-        tk.Label(frame, text='Extra steps take more time. Speaker attribution may download a model.\nThe preservation check is always on for local formatting.',
-                 bg='white', fg=MUTED, justify='left', wraplength=390).pack(anchor='w', pady=16)
+        tk.Label(frame, text='Extra steps take more time. Speaker attribution may download a model.\nThe preservation check is always on for the default local formatting.',
+                 bg='white', fg=MUTED, justify='left', wraplength=390).pack(anchor='w', pady=(16, 12))
+        ttk.Separator(frame).pack(fill='x', pady=(0, 12))
+        self.readable_check = ttk.Checkbutton(frame, text='Readable draft instead of punctuation only', variable=self.opt_readable)
+        self.readable_check.pack(anchor='w')
+        readable_note = ('Rewrites the transcript for readability and may change wording; the model is asked to keep '
+                         'unclear spans verbatim and mark them （※要確認）. The word-and-number guarantee does NOT apply; '
+                         'the original text and a diff stay in the Review tab. Every result needs human review.')
+        if self._readable_unavailable:
+            self.readable_check.state(['disabled'])
+            readable_note = 'Readable draft mode is unavailable: ' + self._readable_unavailable
+        tk.Label(frame, text=readable_note, bg='white', fg=MUTED, justify='left', wraplength=390).pack(anchor='w', pady=(4, 16))
         ttk.Button(frame, text='Done', style='Accent.TButton', command=dialog.destroy).pack(anchor='e')
         dialog.grab_set()

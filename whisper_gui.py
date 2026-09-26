@@ -1,6 +1,7 @@
 """
 Whisper large-v3-turbo + MMV formatting (Gemma-4 12B QAT).
-Local: MMV harness + minimal-edit instruction + lexical acceptance check.
+Local default: MMV harness + punctuation-only instruction + lexical preservation check.
+Opt-in: readable draft mode (rewrites for readability, marks unclear spans, review required).
 Optional cloud: independent frozen MMV-L harness, explicit GUI consent.
 See README.md for startup and validation limits.
 """
@@ -99,14 +100,32 @@ def whisper_weights_path(name=None):
 try:
     sys.path.insert(0, MMV_ROOT)
     from harness.adapters import call_adapter
+    # Default engine: punctuation-only formatting with the lexical/numeric preservation check.
     MMV_CLIENT = MMVFormatter(call_adapter)
-    MMV_M = {"release":"MMV-Format-v2 (trial)", "model":MODEL, "local":True,
-             "backend":"mmv_format", "profile":MMV_CLIENT.profile,
-             "profile_path":str(PROFILE_PATH)}
+    MMV_M = {"release":"MMV-Format-v2 (verbatim)", "model":MMV_CLIENT.profile["model_id"], "local":True,
+             "backend":"mmv_format", "profile":MMV_CLIENT.profile, "client":MMV_CLIENT,
+             "profile_path":str(PROFILE_PATH), "format_mode":"verbatim"}
 except Exception as _e:
     MMV_LOAD_ERR = f"{type(_e).__name__}: {_e}"
+# Opt-in readable draft mode (may rewrite wording; marks unclear spans; human review required).
+# Chosen per job in "Optional steps"; MMV_FORMAT_MODE=readable only pre-selects the checkbox.
+MMV_READABLE, MMV_READABLE_ERR = None, None
+FORMAT_MODE = os.environ.get("MMV_FORMAT_MODE", "verbatim")
+if FORMAT_MODE not in ("readable", "verbatim"):
+    MMV_READABLE_ERR = "MMV_FORMAT_MODE must be readable or verbatim"
+    FORMAT_MODE = "verbatim"
+elif MMV_LOAD_ERR is None:
+    try:
+        from voice_readable import ReadableFormatter
+        READABLE_CLIENT = ReadableFormatter(call_adapter, model=os.environ.get("MMV_READABLE_MODEL", MODEL))
+        MMV_READABLE = {"release":"MMV-Readable draft (review required)", "model":READABLE_CLIENT.profile["model_id"],
+                        "local":True, "backend":"mmv_format", "profile":READABLE_CLIENT.profile, "client":READABLE_CLIENT,
+                        "profile_path":READABLE_CLIENT.profile_path, "format_mode":"readable"}
+    except Exception as _e:
+        MMV_READABLE_ERR = f"{type(_e).__name__}: {_e}"
 try:
     MMV_L = _load_mmv_binding("large")
+    MMV_L["format_mode"] = "cloud"   # rewrite-style legacy prompts, off-machine; never the readable or verbatim contract
 except Exception as _e:
     MMV_L_ERR = f"{type(_e).__name__}: {_e}"
 
@@ -281,7 +300,8 @@ def mmv_formatting(text, progress_cb=None, with_speakers=False, engine=None,
     """
     engine = engine or MMV_M
     if engine and engine.get("backend") == "mmv_format":
-        formatted, audit = MMV_CLIENT.format(text, lang, progress_cb)
+        client = engine.get("client") or MMV_CLIENT
+        formatted, audit = client.format(text, lang, progress_cb)
         engine["format_audit"] = audit
         return formatted, [(r["source"],r["text"],not r["accepted"]) for r in audit]
     instruction = format_instruction(lang, with_speakers)
@@ -555,6 +575,7 @@ def write_secretary_digest(meta, formatted, minutes, fidelity_report):
         f"- language: {meta.get('language', '?')}",
         f"- formatter: {meta.get('engine', '?')} via selected engine",
         f"- format_profile: {meta.get('format_profile', '')}",
+        f"- format_mode: {meta.get('format_mode', 'verbatim-or-legacy')}",
         "- human_verified: false",
         f"- speaker_backend: {meta.get('speaker_backend') or '(no speaker attribution)'}",
         f"- fidelity: {meta.get('fidelity_summary', '(not verified)')}",
@@ -641,6 +662,7 @@ class WhisperMMVGUI(WorkspaceUI):
         self._checking = False
         self._started_at = None
         self._cloud_available = MMV_L is not None
+        self._readable_unavailable = None if MMV_READABLE is not None else (MMV_READABLE_ERR or MMV_LOAD_ERR or 'not loaded')
         master.title(f"Whisper {WHISPER_MODEL_SIZE} + {MMV_RELEASE} ({MMV_MODEL})  Voice Formatting Tool")
         master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -652,6 +674,8 @@ class WhisperMMVGUI(WorkspaceUI):
         self.opt_speaker  = tk.BooleanVar(value=False)
         self.opt_fidelity = tk.BooleanVar(value=False)
         self.opt_minutes  = tk.BooleanVar(value=False)
+        self.opt_readable = tk.BooleanVar(value=(FORMAT_MODE == "readable" and MMV_READABLE is not None))
+        self.opt_readable.trace_add("write", self._refresh_privacy)
         self.engine_var   = tk.StringVar(value="M")   # M = local / L = Groq 120B
 
         self.whisper_thread = None
@@ -697,19 +721,27 @@ class WhisperMMVGUI(WorkspaceUI):
         """Return the binding of the currently selected MMV engine."""
         if self.engine_var.get() == "L" and MMV_L is not None:
             return MMV_L
-        return MMV_M
+        if self.opt_readable.get() and MMV_READABLE is not None:
+            return dict(MMV_READABLE)
+        return dict(MMV_M) if MMV_M else None
 
     # ─────────────────────────────────────────
     # Startup check (background)
     # ─────────────────────────────────────────
     def _snapshot_options(self):
         return {"engine": self._active_engine(), "speaker": self.opt_speaker.get(),
-                "fidelity": self.opt_fidelity.get(), "minutes": self.opt_minutes.get()}
+                "fidelity": self.opt_fidelity.get(), "minutes": self.opt_minutes.get(),
+                "readable": bool(self.opt_readable.get() and MMV_READABLE is not None)}
 
-    def _refresh_privacy(self):
+    def _refresh_privacy(self, *_):
         cloud = self.engine_var.get() == "L"
-        self.privacy_var.set("CLOUD SELECTED" if cloud else "LOCAL PROCESSING")
-        self.privacy_badge.config(bg="#FFF0D9" if cloud else "#DFF1ED", fg="#895A12" if cloud else "#176855")
+        readable = bool(self.opt_readable.get() and MMV_READABLE is not None) and not cloud
+        self.privacy_var.set("CLOUD SELECTED" if cloud else "READABLE DRAFT · REVIEW REQUIRED" if readable else "LOCAL PROCESSING")
+        self.privacy_badge.config(bg="#FFF0D9" if cloud else "#FFF4D6" if readable else "#DFF1ED",
+                                  fg="#895A12" if cloud else "#7A5A00" if readable else "#176855")
+        if not self._busy:
+            self.review_var.set("Readable draft selected: wording may change; the original stays in the Review tab."
+                                if readable else "Your original transcript is always preserved.")
 
     def recheck_connection(self):
         if self._checking or self._closed:
@@ -829,6 +861,11 @@ class WhisperMMVGUI(WorkspaceUI):
             self.status_var.set("This tab has no content to save.")
             return
         suffix = ("transcript", "review", "notes")[idx]
+        readable = self.last_result.get("meta", {}).get("format_mode") == "readable"
+        if readable and idx != 1:
+            suffix += "-draft"
+            text = ("[MMV Voice readable draft — wording may differ from the recording; unclear spans are marked "
+                    "（※要確認）; not verified by a human. Original transcript: Review tab / digest]\n\n" + text)
         path = filedialog.asksaveasfilename(title="Save " + suffix,
             initialfile=f"{Path(self.current_audio or 'recording').stem}-{suffix}.txt",
             defaultextension=".txt", filetypes=[("Text", "*.txt"), ("Markdown", "*.md")])
@@ -886,7 +923,8 @@ class WhisperMMVGUI(WorkspaceUI):
         self.current_audio     = filepath
         self.file_var.set(Path(filepath).name)
         self.file_detail_var.set(f"{Path(filepath).stat().st_size / (1024 * 1024):.1f} MB · {Path(filepath).suffix.lstrip('.').upper()}")
-        self.review_var.set("Transcribing locally. Your original text will be preserved.")
+        self.review_var.set("Transcribing locally. A readable draft will follow; the original stays in the Review tab."
+                            if self._job_settings.get("readable") else "Transcribing locally. Your original text will be preserved.")
         self._stage(0, "Preparing your recording")
         self.last_result       = None
         for button in [self.digest_btn, self.copy_btn, self.export_btn]:
@@ -1021,7 +1059,6 @@ class WhisperMMVGUI(WorkspaceUI):
                     pairs, self._post_progress, engine, lang)
                 fidelity_report += "\n\n" + build_fidelity_report(fidelity_results)
                 display_text     = annotate_formatted(pairs, fidelity_results)
-                self._set_textbox(self.fidelity_textbox, fidelity_report)
             self._set_textbox(self.fidelity_textbox, fidelity_report)
             self._set_textbox(self.fmt_textbox, display_text)
 
@@ -1036,7 +1073,7 @@ class WhisperMMVGUI(WorkspaceUI):
             n_ng = sum(1 for r in fidelity_results if not r["ok"])
             fidelity_summary = (
                 f"{len(fidelity_results)} chunks, {n_ng} flagged for review"
-                if fidelity_results else "lexical/numeric preservation checked; semantic fidelity not verified" if engine.get("backend")=="mmv_format" else "(not verified)")
+                if fidelity_results else "readable draft; heuristic signals only; human review required" if engine.get("format_mode")=="readable" else "lexical/numeric preservation checked; semantic fidelity not verified" if engine.get("backend")=="mmv_format" else "(not verified)")
             engine_str = f"{engine['release']} ({engine['model']})"
             engine_str += " · local" if engine["local"] else " · Groq cloud"
             self.last_result = {
@@ -1047,6 +1084,8 @@ class WhisperMMVGUI(WorkspaceUI):
                     "speaker_backend": speaker_backend,
                     "fidelity_summary": fidelity_summary,
                     "format_profile": engine.get("profile_path", ""),
+                    "format_mode": engine.get("format_mode", "cloud" if not engine.get("local", True) else "verbatim"),
+                    "human_verified": False,
                 },
                 "formatted": formatted,
                 "minutes": minutes,
@@ -1056,12 +1095,14 @@ class WhisperMMVGUI(WorkspaceUI):
             counts = {key: sum(row["status"] == key for row in rows) for key in ("formatted", "unchanged", "source_retained")}
             summary = (f"{counts['formatted']} formatted · {counts['unchanged']} unchanged · {counts['source_retained']} source retained"
                        if rows else "Review the transcript before saving.")
+            if engine.get("format_mode") == "readable":
+                summary = f"Draft · {sum(bool(r.get('review_flags')) for r in rows)} chunks flagged · review required"
             self.ui(lambda: self.review_var.set(summary))
             self._stage(2, "Ready to review" + (" · partial recording" if getattr(self, "_job_stopped", False) else ""))
 
             retained = sum(r["status"]=="source_retained" for r in engine.get("format_audit",[]))
             done = (f"⚠️ Formatting finished: {retained} chunk(s) kept the unformatted source (see the Review tab)"
-                    if retained else "✅ All steps complete")
+                    if retained else "Draft ready — review before use" if engine.get("format_mode")=="readable" else "✅ All steps complete")
             if fidelity_results and n_ng:
                 done += f" (⚠️ {n_ng} flagged for review — see the Review tab)"
             self.ui(lambda: self.fmt_progress.config(text=done))

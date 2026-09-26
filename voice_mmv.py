@@ -37,11 +37,17 @@ def split_source(text, limit=1000):
 
 def audit_report(rows):
     labels = {'formatted':'formatted candidate accepted', 'unchanged':'unchanged', 'source_retained':'source retained (unformatted)'}
-    lines = ['Lexical/numeric preservation check (punctuation meaning and ASR correctness not verified)', '']
+    readable = any(row.get('mode') == 'readable' for row in rows)
+    lines = [('Readable draft — human review required; semantic fidelity NOT verified' if readable else 'Lexical/numeric preservation check (punctuation meaning and ASR correctness not verified)'), '']
     for i, row in enumerate(rows,1):
         lines.append(f"{i}: {labels[row['status']]} / {row['reason']}")
+        if row.get('mode') == 'readable':
+            lines.append(f"Profile: {row.get('profile_path')} | diagnostic rules: {row.get('diagnostic_rule_count')} | human_verified: false")
+            lines.append('Review signals: ' + (', '.join(row.get('review_flags', [])) or 'no heuristic signal; not a semantic clearance'))
         lines.append('[source]\n'+row['source'])
         lines.append('[model candidate]\n'+row['candidate'])
+        if row.get('diff'):
+            lines.append('[changes]\n'+row['diff'])
         lines.append('')
     return '\n'.join(lines)
 
@@ -53,16 +59,21 @@ MODEL = 'gemma4:12b-it-qat'
 MODEL_DIGEST = '38044be4f923e5a55264ed7df4eaac2676651a905f735197c504045140c02bd3'
 PROFILE_PATH = Path(__file__).resolve().parent / 'profiles/mmv_format_12b_qat.json'
 
+def local_endpoint(endpoint=None):
+    endpoint = endpoint or os.environ.get('MMV_FORMAT_HOST', 'http://127.0.0.1:11434')
+    url = urlsplit(endpoint)
+    if (url.scheme != 'http' or url.hostname not in ('127.0.0.1','::1','localhost')
+            or url.username or url.password or url.path not in ('','/') or url.query or url.fragment):
+        raise ValueError('MMV_FORMAT_HOST must be a loopback HTTP origin')
+    return endpoint.rstrip('/')
+
+
 class MMVFormatter:
+    split_text = staticmethod(split_source)
     def __init__(self, call_adapter, endpoint=None):
         self.call_adapter = call_adapter
         self.profile = json.loads(PROFILE_PATH.read_text())
-        endpoint = endpoint or os.environ.get('MMV_FORMAT_HOST', 'http://127.0.0.1:11434')
-        url = urlsplit(endpoint)
-        if (url.scheme != 'http' or url.hostname not in ('127.0.0.1','::1','localhost')
-                or url.username or url.password or url.path not in ('','/') or url.query or url.fragment):
-            raise ValueError('MMV_FORMAT_HOST must be a loopback HTTP origin')
-        self.profile['endpoint'] = endpoint.rstrip('/')
+        self.profile['endpoint'] = local_endpoint(endpoint)
         if (self.profile['model_id'] != MODEL or self.profile['backend'] != 'ollama'
                 or not all(self.profile.get(k) is True for k in ('route_transformer','post_validator','force_reanchor_v2'))):
             raise ValueError('Formatting profile does not match the measured MMV configuration')
@@ -109,7 +120,7 @@ class MMVFormatter:
         return row
 
     def format(self, source, lang='ja', progress_cb=None):
-        chunks = split_source(source)
+        chunks = self.split_text(source)
         try:
             self.check_ready()
             error = None
@@ -118,7 +129,7 @@ class MMVFormatter:
         rows = []
         for i, chunk in enumerate(chunks):
             if progress_cb:
-                progress_cb(f'MMV 12B QAT formatting… ({i+1}/{len(chunks)})')
+                progress_cb(f"MMV {self.profile['model_id']} formatting… ({i+1}/{len(chunks)})")
             row = (self.format_chunk(chunk,lang) if error is None else
                    dict(source=chunk,candidate='',text=chunk,status='source_retained',accepted=False,reason=error,seconds=0.0))
             rows.append(row)

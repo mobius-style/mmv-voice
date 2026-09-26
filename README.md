@@ -170,6 +170,19 @@ invented tokens 0 — and touches read speech almost never (3/36 English
 chunks, 12B). Details: [held-out report](eval/mmv_readable_heldout_20260926.md),
 [mode contract](docs/READABLE_MODE.md).
 
+**Validated on a second, native-English meeting (AMI ES2008a) and 36 more
+new clips with the shipped v0.2.11 code
+([report](eval/mmv_guard_e3_20260926.md)):** on the meeting the guard met
+every declared expectation (after-guard content loss 0.2 and 0.1 per 100,
+invented 0, error rate within 0.1 pt of Whisper) while returning 18/42
+(12B) and 30/42 (26B) chunks to the source. On read speech it retained more
+than the declared bound for 26B (3–9 of 36 per language) — mostly
+paraphrases and one Japanese false-positive class fixed in v0.2.12 (9 → 6);
+the thresholds were left unchanged. The English prompt gained three worked
+marking examples (E3) after a frozen comparison: markers on real errors
+0 → 3 on the clips, none on the meeting for any English prompt — English
+marking remains weak.
+
 A sibling of [mobius-style/mmv](https://github.com/mobius-style/mmv): every
 LLM call goes through the MMV harness, never a raw API. v0.2 replaced the
 v0.1 rewrite-style formatter with this minimal-edit one; v0.1 remains
@@ -489,6 +502,8 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.12` | 2026-09-26 | guard validated on a second meeting (report in `eval/`); Japanese added-content rule no longer flags a source name wrapped in new particles; English readable prompt E3 (worked marking examples) adopted by frozen rule |
+| `v0.2.11` | 2026-09-26 | English-only comments and code-spanned examples (gate compliance; no behaviour change) |
 | `v0.2.10` | 2026-09-26 | readable draft: bounded-edit guard (numerals and negation count unchanged, content loss ≤ min(15, max(1, 3/100)), no added content incl. Japanese kana words) keeps the source chunk on violation; readable checkbox disabled while the cloud engine is selected |
 | `v0.2.9` | 2026-09-26 | documentation: held-out comparison of the shipped engines (default vs readable 12B/26B) added to `eval/` |
 | `v0.2.8` | 2026-09-26 | opt-in readable draft mode (`voice_readable.py`: rewrite for readability, `（※要確認）` markers for unclear spans, sentence-end chunking, 12B or digest-pinned 26B); default engine and its guarantee unchanged |

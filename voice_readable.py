@@ -67,11 +67,14 @@ KANA_PARTICLES = set('のはがをにでとへもやかなねよさしてたつ�
 _KANA_RUN = re.compile(r'[\u3040-\u30ff\u30fc]{2,}')
 
 
-def _kana_run_is_functional(run):
+def _kana_run_is_functional(run, source_runs=()):
+    """True when the run can be segmented into grammatical fragments and kana runs that already occur in the source
+    (so a source name wrapped in new particles, e.g. は + ウェールズ + は, is not new content)."""
+    frags = sorted(set(KANA_FUNCTION) | {r for r in source_runs if len(r) >= 2}, key=len, reverse=True)
     i = 0
     while i < len(run):
         step = 0
-        for frag in sorted(KANA_FUNCTION, key=len, reverse=True):
+        for frag in frags:
             if run.startswith(frag, i): step = len(frag); break
         if not step and run[i] in KANA_PARTICLES: step = 1
         if not step: return False
@@ -138,8 +141,9 @@ def readable_postcondition(source, candidate, lang='ja'):
     elif key == 'ja':
         new = [c for c in added.elements() if _KANJI.match(c)]
         plain_src = source.replace('（※要確認）', '')
+        src_runs = _KANA_RUN.findall(plain_src)
         for run in _KANA_RUN.findall(candidate.replace('（※要確認）', '')):
-            if run not in plain_src and not _kana_run_is_functional(run):
+            if run not in plain_src and not _kana_run_is_functional(run, src_runs):
                 new.append(run)
     else:
         new = [c for c in added.elements() if c not in ZH_FUNCTION and not c.isdigit()]

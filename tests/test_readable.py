@@ -61,7 +61,8 @@ class ReadableTests(unittest.TestCase):
               ('zh','他说这很重要','他说“这很重要”。'),                                                     # added quotes are not content
               ('ja','東京で会います','東京で会います。')]
         for lang,s,c in ok: self.assertEqual(vr.readable_postcondition(s,c,lang),[],(s,c))
-        ok+= [('ja','私はそこに行きます','私はそこに行きます。'),('ja','資料を確認しています','資料を確認しています。')]
+        ok+= [('ja','私はそこに行きます','私はそこに行きます。'),('ja','資料を確認しています','資料を確認しています。'),
+              ('ja','彼ウェールズは嘘をついていました','彼はウェールズ（※要確認）は、嘘をついていました。')]   # source name + new particles is not new content
         for lang,s,c in ok: self.assertEqual(vr.readable_postcondition(s,c,lang),[],(s,c))
         bad=[('ja','そこに行く','そこに行かない。','negation_count_changed'),                                   # plain verb negation (review 2026-09-26 #1)
              ('ja','一つ選んでください','すべて選んでください。','content_added'),                                # kana-only quantifier flip (#2)

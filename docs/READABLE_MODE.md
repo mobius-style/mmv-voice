@@ -58,8 +58,9 @@ these holds:
   `その`, `あの`, `这个`) are not treated as fillers (`omission_over_limit`);
 - the draft contains content the source does not: English words outside a
   small function-word list, Japanese kanji or kana runs that cannot be built
-  from particles / auxiliaries / formal nouns (so `すべて` counts, `ています`
-  does not), Mandarin characters outside a small function-character list
+  from particles / auxiliaries / formal nouns and kana runs already present
+  in the source (so `すべて` counts, `ています` or a source name wrapped in
+  new particles does not), Mandarin characters outside a small function-character list
   (`content_added`). Japanese negation is counted on `ない` / `なかった` /
   `ません` / `ではなく`; Mandarin on `不 没 无 非 未`; English on not / never /
   no / without and contracted forms.
@@ -83,6 +84,17 @@ chunk and record `annotation_scope=chunk`; they do not claim to locate the
 exact error. Even text without a marker is unverified. The raw model output is
 kept as `candidate` / `model_candidate`; `text` is the delivered, annotated
 version.
+
+## Validation so far
+
+- 2026-09-26, held-out outputs used to set the thresholds: meeting chunks
+  kept as source 14/18 (12B) and 15/18 (26B); read speech 3/36 English.
+- 2026-09-26, second meeting (AMI ES2008a, native English) and 36 new clips,
+  shipped code: meeting after-guard content loss 0.21 / 0.09 per 100,
+  invented 0, error rate within 0.1 pt of Whisper; read speech retention
+  3/36 (12B English), 3 / 9→6 / 3 of 36 (26B English / Japanese / Mandarin)
+  — above the declared 2/36 bound for 26B; thresholds unchanged, one Japanese
+  false-positive class fixed. Report: `eval/mmv_guard_e3_20260926.md`.
 
 ## Chunking and models
 

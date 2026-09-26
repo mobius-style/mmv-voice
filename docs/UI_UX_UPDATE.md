@@ -17,4 +17,4 @@ Browser checks at 1440 × 900 and 390 × 844 found no horizontal page overflow; 
 
 ## Integration with Claude
 
-This build does not modify voice_mmv.py, model prompts or profiles. The v0.3b experiment (scaffold strip, sentence-aware chunking, Whisper `condition_on_previous_text=False`) was evaluated separately and put on HOLD: it raised WER on the new held-out meeting by 41.75 points, so none of it is included here.
+This build does not modify voice_mmv.py, model prompts or profiles. The v0.3b experiment (scaffold strip, sentence-aware chunking, Whisper `condition_on_previous_text=False`) was evaluated separately and put on HOLD: the repetition loops disappeared and 4 of 5 chunks were formatted, but on the new held-out meeting Whisper's automatic language detection chose Dutch for English speech and WER rose from 43% to 85% (the two development meetings were unchanged or better). None of it is included here; reports are in `eval/mmv_voice_v03_20260926.md` and `eval/mmv_voice_v03b_20260926.md`.

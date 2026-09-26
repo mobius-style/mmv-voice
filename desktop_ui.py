@@ -56,20 +56,23 @@ class WorkspaceUI:
         def label(text, bold=False, pady=(0, 8)):
             tk.Label(inner, text=text, bg='white', fg=INK if bold else MUTED, anchor='w', justify='left', wraplength=200,
                      font=('DejaVu Sans', 10, 'bold' if bold else 'normal')).pack(fill='x', pady=pady)
-        label('YOUR RECORDING', True)
-        tk.Label(inner, textvariable=self.file_var, bg='white', fg=INK, anchor='w', justify='left', wraplength=200).pack(fill='x', pady=(4, 6))
-        tk.Label(inner, textvariable=self.file_detail_var, bg='white', fg=MUTED, anchor='w', justify='left', wraplength=200, font=('DejaVu Sans', 9)).pack(fill='x', pady=(0, 15))
+        # Order and padding matter: at large Tk scaling (HiDPI, e.g. 1.33x–1.8x) the
+        # sidebar is height-limited and clips from the bottom, so the essential
+        # controls (open, local/cloud choice) come first and the hints come last.
+        label('YOUR RECORDING', True, pady=(0, 4))
+        tk.Label(inner, textvariable=self.file_var, bg='white', fg=INK, anchor='w', justify='left', wraplength=200).pack(fill='x', pady=(2, 2))
+        tk.Label(inner, textvariable=self.file_detail_var, bg='white', fg=MUTED, anchor='w', justify='left', wraplength=200, font=('DejaVu Sans', 9)).pack(fill='x', pady=(0, 8))
         self.select_btn = ttk.Button(inner, text='Open audio…', style='Accent.TButton', command=self.select_file)
         self.select_btn.pack(fill='x')
-        label('Ctrl+O · Open recording', pady=(8, 12))
-        ttk.Separator(inner).pack(fill='x', pady=(0, 18))
-        label('PROCESSING', True)
+        ttk.Separator(inner).pack(fill='x', pady=(10, 8))
+        label('PROCESSING', True, pady=(0, 2))
         self.engine_m_btn = ttk.Radiobutton(inner, text='On this computer', variable=self.engine_var, value='M', command=self._refresh_privacy)
         self.engine_m_btn.pack(anchor='w')
         self.engine_l_btn = ttk.Radiobutton(inner, text='Groq cloud · optional', variable=self.engine_var, value='L', command=self._confirm_cloud_engine)
         self.engine_l_btn.pack(anchor='w')
         if not self._cloud_available: self.engine_l_btn.state(['disabled'])
-        label('Cloud mode sends transcript text. Local is the default.', pady=(6, 10))
+        label('Cloud mode sends transcript text. Local is the default.', pady=(4, 6))
+        label('Ctrl+O · Open recording  ·  Ctrl+S · Save text', pady=(4, 0))
         self.options_btn = ttk.Button(side_actions, text='Optional steps…', command=self._show_options)
         self.options_btn.pack(fill='x')
         self.option_widgets = [self.options_btn]

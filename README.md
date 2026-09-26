@@ -165,9 +165,17 @@ CC BY 4.0), on one RTX 5070 Ti:
   changed capitalisation — in 4 at a chunk that starts mid-sentence (the
   1,000-character split cuts sentences), plus mid-chunk changes such as
   "And" → "and"; one also dropped a repeated "Thank you". All are rejected
-  by the word check, as designed. A fix (strip the known
-  boilerplate before the check, split at sentence ends) is being measured
-  for v0.3.
+  by the word check, as designed. Two fixes were measured and are **on
+  hold**: v0.3 (strip the known boilerplate before the check, split at
+  sentence ends) raised the formatted share on a new held-out meeting from
+  0/6 to 2/6 but missed its ≥50% gate on another; v0.3b added Whisper
+  `condition_on_previous_text=False`, which removed the repetition loops on
+  all three meetings and reached 4/5 formatted chunks, but on the new
+  held-out meeting Whisper's automatic language detection then chose Dutch
+  for an English meeting and WER rose from 43% to 85% (the two development
+  meetings: +0.04 and −3.47 points). Reports:
+  [v0.3](eval/mmv_voice_v03_20260926.md),
+  [v0.3b](eval/mmv_voice_v03b_20260926.md).
 
 ## Reference: Mandarin Chinese
 
@@ -409,6 +417,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.6` | 2026-09-26 | sidebar layout fix for HiDPI displays (cloud-engine choice was clipped at 1.33× scaling); v0.3 / v0.3b HOLD reports added to `eval/`; stale "being measured" wording and diagram label updated |
 | `v0.2.5` | 2026-09-26 | desktop UI refresh: one workspace (source and result side by side), main-thread event queue, sequential stop → release → format lifecycle, UTF-8 text export (Ctrl+O / Ctrl+S), elapsed time and explicit local/cloud state; responsive landing page. No change to prompts, profiles, validator or chunking |
 | `v0.2.4` | 2026-09-26 | English prompt: semicolon hint removed (measured on 12 new clips); `install.sh` one-command local installer (also pre-fetches Whisper weights so work is offline); local-first README and diagrams; long-meeting result documented |
 | `v0.2.3` | 2026-09-26 | documentation only: English results as the lead topic of the README and landing page; Mandarin reference measurement added in `eval/` |

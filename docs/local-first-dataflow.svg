@@ -57,7 +57,7 @@
     <polyline points="667,357 667,395 580,395" marker-end="url(#a)"/>
   </g>
   <rect x="360" y="372" width="220" height="48" rx="8" fill="#fff" stroke="#1f2937"/>
-  <text x="470" y="393" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Result + verification report</text>
+  <text x="470" y="393" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Result + Review tab</text>
   <text x="470" y="411" font-size="12" fill="#4b5563" text-anchor="middle">source · candidate · reason per chunk</text>
 
   <!-- outside -->

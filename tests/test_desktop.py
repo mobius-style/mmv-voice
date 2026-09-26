@@ -35,6 +35,18 @@ class DesktopTests(unittest.TestCase):
             self.assertTrue(w.winfo_ismapped(),name)
             self.assertLessEqual(w.winfo_rooty()+w.winfo_height(),self.root.winfo_rooty()+self.root.winfo_height(),name)
         self.assertEqual(self.app.fmt_textbox.cget('state'),'disabled')
+    def test_minimum_layout_at_hidpi_scaling(self):
+        # Regression: on a 1.33x display the cloud-engine radio was clipped out of the sidebar (v0.2.5).
+        self.app._busy = False; self.app.on_closing()
+        self.root = tk.Tk(); self.root.tk.call('tk', 'scaling', 1.8)
+        with patch.object(gui.WhisperMMVGUI, '_startup_check', lambda self: None):
+            self.app = gui.WhisperMMVGUI(self.root)
+        self.root.report_callback_exception = lambda *args: self.errors.append(args)
+        self.root.geometry('980x680'); self.root.update()
+        for name in ['select_btn','engine_m_btn','engine_l_btn','options_btn','digest_btn','export_btn','kill_btn']:
+            w=getattr(self.app,name)
+            self.assertTrue(w.winfo_ismapped(),name)
+            self.assertLessEqual(w.winfo_rooty()+w.winfo_height(),self.root.winfo_rooty()+self.root.winfo_height(),name)
     def test_worker_updates_are_queued_and_bounded(self):
         seen=[]
         worker=threading.Thread(target=lambda:[self.app.ui(lambda:seen.append(threading.get_ident())) for _ in range(600)])

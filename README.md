@@ -37,6 +37,61 @@ This is a **local trial build**: no fine-tuning, no claim of general model
 quality, small read-speech test panels only. The previous release is
 preserved as tag `v0.1`.
 
+## English results (the language this release is built around)
+
+Everything in v0.2 — documentation, UI, prompts, tests — is written for
+English first. Measured on 8 held-out English FLEURS clips (not used during
+development), 3 runs each at temperature 0:
+
+- **No word or number changed on any clip.** Every clip's candidate passed
+  the preservation check and was delivered; **no clip fell back** to the raw
+  transcript. The 3 repeats gave identical output, so this is 8 clips, not
+  24 independent trials (Wilson 95% interval for 8/8: 68–100%).
+- **The formatter is designed not to change your transcript's words.** A
+  candidate that alters any word or number is discarded and Whisper's text is
+  kept, so the character error rate is unchanged (5.01% on this panel).
+  Enforced by the preservation check and covered by tests; not a formal
+  proof beyond that coverage. Compare Japanese on the same release: 3 of 36
+  runs fell back to the raw transcript.
+- **Why that matters.** The rewrite-style approach used up to v0.1
+  (rewrite into written prose, drop fillers), re-run on the same 12B QAT
+  model, averaged 20.82% CER on the same clips. More than half of that comes from
+  one clip where it returned a request for the transcript instead of
+  formatted text, and about a quarter from a clip where it silently reworded
+  a list ("acidic, basic, alkaline" became "whether … is acidic, basic, or
+  alkaline"). Per clip the median difference is small, 3 of 8 were tied and
+  it did better on 1. The point is not that it is usually worse, but that a
+  rewriting formatter *can* silently change words, and MMV-Format is built to
+  reject such output.
+- **Known limitation — on this panel English punctuation got worse, not
+  better.** Each of the 7 changed clips gained a semicolon that the reference
+  does not have (some are ungrammatical, e.g. "The Governor's Office; and
+  19…"); in 4 of them an existing Whisper comma was replaced, and one clip
+  also gained two commas. Only the words are guaranteed; the punctuation is
+  not. Against the reference, punctuation-position F1 stayed flat (0.766 →
+  0.769) while position+type F1 fell (0.681 → 0.500). The English prompt's
+  semicolon hint is the likely cause and will be revisited.
+- A regression run on the pre-release build (functionally identical to
+  v0.2; only UI labels differ) accepted 8/8 again on the same clips; one
+  clip's output differed from the 2026-09-24 run.
+
+**Reference: Mandarin Chinese** (exploratory, 8 FLEURS `cmn_hans_cn` clips,
+same shipped build; Chinese uses the English prompt branch). 7/8 clips
+accepted in all 3 identical repeats (21/24 runs); the one rejected clip had a
+name separator changed and fell back to Whisper's text. Whisper's Mandarin
+output is lightly punctuated, and formatting raised punctuation-position F1
+from 0.278 to 0.786 and position+type F1 from 0.056 to 0.500; CER stayed
+14.45% by construction. Record:
+[eval/mmv_voice_zh_20260926.md](eval/mmv_voice_zh_20260926.md).
+
+Scope: small read-speech panel; FLEURS is public, so overlap with Whisper's
+or Gemma's training data is unresolved; timings in the record come from a
+fixed run order and are not a speed comparison; noisy, multi-speaker and
+long recordings are untested. Full record, including that the trial's
+overall verdict was HOLD (for Japanese, addressed exploratorily by the v2
+prompt on a new 12-clip panel):
+[eval/mmv_format_12b_qat_20260924.md](eval/mmv_format_12b_qat_20260924.md).
+
 ## What it does
 
 1. **Transcription** — Whisper `large-v3-turbo` (GPU when available,
@@ -98,14 +153,17 @@ unevaluated.
 
 ## Measured results (summary)
 
-From [MMV_FORMAT_STATUS.md](MMV_FORMAT_STATUS.md), FLEURS read speech,
+From [MMV_FORMAT_STATUS.md](MMV_FORMAT_STATUS.md) and
+[eval/mmv_format_12b_qat_20260924.md](eval/mmv_format_12b_qat_20260924.md), FLEURS read speech,
 Whisper large-v3-turbo, 3 repeats per clip at temperature 0:
 
 | Panel | Candidate acceptance | Actually formatted | Source retained | Punctuation-position F1 vs reference |
 |---|---:|---:|---:|---:|
+| English, 8 held-out clips × 3 (2026-09-24; repeats identical) | 8/8 clips | 7/8 (each added a semicolon the reference lacks) | 0/8 | 0.766 → 0.769 (type-aware 0.681 → 0.500) |
+| Mandarin, 8 clips × 3 (2026-09-26, reference; repeats identical) | 7/8 clips (21/24 runs) | 21/24 | 3/24 | 0.278 → 0.786 (type-aware 0.056 → 0.500) |
 | Japanese, 12 new clips, v2 prompt | 91.7% (33/36) | 30/36 | 3/36 | 0.857 |
 | Japanese, same clips, previous v1 prompt | 83.3% (30/36) | 24/36 | 6/36 | 0.857 |
-| English, 8 clips (regression, 1 run) | 8/8 | 6/8 | 0/8 | — |
+| English, same 8 clips (regression, pre-release build, 1 run) | 8/8 | 6/8 | 0/8 | — |
 
 Acceptance means the candidate passed the preservation check, not that its
 punctuation is correct. The post-hoc punctuation-position F1 is identical
@@ -251,6 +309,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.3` | 2026-09-26 | documentation only: English results as the lead topic of the README and landing page; Mandarin reference measurement added in `eval/` |
 | `v0.2.2` | 2026-09-25 | documentation only: local-first wording, Hugging Face metadata (v0.2.1 had invalid Space metadata) |
 | `v0.2` | 2026-09-25 | default engine replaced by MMV-Format (punctuation-only, preservation check, digest pinning, audit in report); speaker / fidelity / minutes now off by default; English documentation; measured trials in `eval/` |
 

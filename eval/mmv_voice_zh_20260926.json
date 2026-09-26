@@ -1,0 +1,278 @@
+{
+  "study": {
+    "date": "2026-09-26",
+    "classification": "exploratory, descriptive, unreviewed local engineering measurement",
+    "plan_sha256": "4e17e380f35111ce6c1b100a015c88601f090f718e0ad0e0b75747b3d9d6edfd",
+    "bootstrap_iterations": 10000,
+    "bootstrap_seed": 20260926,
+    "sample_count_zh": 8,
+    "duration_seconds_zh": 101.62
+  },
+  "calibration": {
+    "known_good_exact": "passed",
+    "known_bad_no_punctuation": "passed",
+    "position_vs_type_discrimination": "passed",
+    "shifted_boundary": "passed",
+    "ascii_full_width_mapping": "passed",
+    "cer_punctuation_removal": "passed",
+    "cer_substitution": "passed"
+  },
+  "zh": {
+    "acceptance_run": {
+      "accepted": 21,
+      "total": 24,
+      "rate": 0.875,
+      "cluster_bootstrap_ci95": [
+        0.625,
+        1.0
+      ]
+    },
+    "acceptance_clip_all_repeats": {
+      "accepted": 7,
+      "total": 8,
+      "rate": 0.875,
+      "bootstrap_ci95": [
+        0.625,
+        1.0
+      ]
+    },
+    "per_repeat": [
+      {
+        "repeat": 0,
+        "accepted": 7,
+        "total": 8,
+        "acceptance": 0.875,
+        "bootstrap_ci95": [
+          0.625,
+          1.0
+        ],
+        "statuses": {
+          "formatted": 7,
+          "source_retained": 1
+        },
+        "median_seconds": 0.817274463501235
+      },
+      {
+        "repeat": 1,
+        "accepted": 7,
+        "total": 8,
+        "acceptance": 0.875,
+        "bootstrap_ci95": [
+          0.625,
+          1.0
+        ],
+        "statuses": {
+          "formatted": 7,
+          "source_retained": 1
+        },
+        "median_seconds": 0.7887811250002414
+      },
+      {
+        "repeat": 2,
+        "accepted": 7,
+        "total": 8,
+        "acceptance": 0.875,
+        "bootstrap_ci95": [
+          0.625,
+          1.0
+        ],
+        "statuses": {
+          "formatted": 7,
+          "source_retained": 1
+        },
+        "median_seconds": 0.7864989859990601
+      }
+    ],
+    "repeat_outputs_identical_within_clip": true,
+    "statuses": {
+      "formatted": 21,
+      "source_retained": 3
+    },
+    "rejection_reasons": {
+      "content_changed": 3
+    },
+    "median_seconds": 0.7983076739983517,
+    "cer": {
+      "raw": {
+        "edits": 51,
+        "reference_chars": 353,
+        "cer": 0.14447592067988668,
+        "bootstrap_ci95": [
+          0.05144694533762058,
+          0.2419954446064138
+        ]
+      },
+      "delivered": {
+        "edits": 153,
+        "reference_chars": 1059,
+        "cer": 0.14447592067988668,
+        "bootstrap_ci95": [
+          0.05144694533762058,
+          0.2419954446064138
+        ]
+      }
+    },
+    "punctuation": {
+      "raw": {
+        "position": {
+          "tp": 5,
+          "pred": 5,
+          "gold": 31,
+          "precision": 1.0,
+          "recall": 0.16129032258064516,
+          "f1": 0.27777777777777773,
+          "bootstrap_ci95": [
+            0.0,
+            0.5
+          ]
+        },
+        "position_type": {
+          "tp": 1,
+          "pred": 5,
+          "gold": 31,
+          "precision": 0.2,
+          "recall": 0.03225806451612903,
+          "f1": 0.05555555555555555,
+          "bootstrap_ci95": [
+            0.0,
+            0.13636363636363638
+          ]
+        },
+        "outputs": 8,
+        "clips": 8,
+        "mean_content_alignment_distance": 6.375
+      },
+      "delivered": {
+        "position": {
+          "tp": 66,
+          "pred": 75,
+          "gold": 93,
+          "precision": 0.88,
+          "recall": 0.7096774193548387,
+          "f1": 0.7857142857142856,
+          "bootstrap_ci95": [
+            0.6666666666666666,
+            0.9122807017543859
+          ]
+        },
+        "position_type": {
+          "tp": 42,
+          "pred": 75,
+          "gold": 93,
+          "precision": 0.56,
+          "recall": 0.45161290322580644,
+          "f1": 0.5,
+          "bootstrap_ci95": [
+            0.2962962962962963,
+            0.6461538461538462
+          ]
+        },
+        "outputs": 24,
+        "clips": 8,
+        "mean_content_alignment_distance": 6.375
+      },
+      "delivered_minus_raw": {
+        "position": {
+          "delta_f1": 0.5079365079365079,
+          "bootstrap_ci95": [
+            0.28263679220297677,
+            0.8260869565217391
+          ]
+        },
+        "position_type": {
+          "delta_f1": 0.4444444444444444,
+          "bootstrap_ci95": [
+            0.2828282828282828,
+            0.5833333333333334
+          ]
+        }
+      }
+    }
+  },
+  "en_saved_2026_09_24": {
+    "source": "the 2026-09-24 trial record (per-clip outputs, not in this repository; summarized in `eval/mmv_format_12b_qat_20260924.md`)",
+    "new_inference": false,
+    "repeat_outputs_identical_within_clip": true,
+    "punctuation": {
+      "raw": {
+        "position": {
+          "tp": 18,
+          "pred": 20,
+          "gold": 27,
+          "precision": 0.9,
+          "recall": 0.6666666666666666,
+          "f1": 0.7659574468085106,
+          "bootstrap_ci95": [
+            0.6046511627906976,
+            0.9090909090909091
+          ]
+        },
+        "position_type": {
+          "tp": 16,
+          "pred": 20,
+          "gold": 27,
+          "precision": 0.8,
+          "recall": 0.5925925925925926,
+          "f1": 0.6808510638297872,
+          "bootstrap_ci95": [
+            0.45275943396226415,
+            0.8846153846153846
+          ]
+        },
+        "outputs": 8,
+        "clips": 8,
+        "mean_content_alignment_distance": 4.5
+      },
+      "delivered": {
+        "position": {
+          "tp": 60,
+          "pred": 75,
+          "gold": 81,
+          "precision": 0.8,
+          "recall": 0.7407407407407407,
+          "f1": 0.7692307692307692,
+          "bootstrap_ci95": [
+            0.6530612244897959,
+            0.888888888888889
+          ]
+        },
+        "position_type": {
+          "tp": 39,
+          "pred": 75,
+          "gold": 81,
+          "precision": 0.52,
+          "recall": 0.48148148148148145,
+          "f1": 0.5,
+          "bootstrap_ci95": [
+            0.35294117647058826,
+            0.6551865460712265
+          ]
+        },
+        "outputs": 24,
+        "clips": 8,
+        "mean_content_alignment_distance": 4.5
+      },
+      "delivered_minus_raw": {
+        "position": {
+          "delta_f1": 0.003273322422258529,
+          "bootstrap_ci95": [
+            -0.058700209643606005,
+            0.08085106382978724
+          ]
+        },
+        "position_type": {
+          "delta_f1": -0.18085106382978722,
+          "bootstrap_ci95": [
+            -0.2808937528499773,
+            -0.07542147293700086
+          ]
+        }
+      }
+    }
+  },
+  "method": {
+    "cer": "Unicode NFKC + lowercase; remove Unicode punctuation and whitespace; micro character Levenshtein distance.",
+    "punctuation": "Normalize common ASCII/full-width punctuation types; remove punctuation/space to obtain content characters; deterministic minimum-edit global alignment (diagonal, then reference deletion, then hypothesis insertion tie order); project hypothesis punctuation boundaries onto reference boundaries; micro F1 for boundary position and for boundary+normalized type.",
+    "bootstrap": "Percentile 95% CI from 10,000 resamples of independent clip IDs with replacement. Delivered clip units retain all three repeats, so repeats are clustered rather than treated as independent clips."
+  }
+}

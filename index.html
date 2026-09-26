@@ -36,8 +36,13 @@
     <a href="https://github.com/mobius-style/mmv-voice">Source on GitHub</a>
     <a href="README.md">README</a>
     <a href="MMV_FORMAT_STATUS.md">Measured status (2026-09-25)</a>
+    <a href="eval/mmv_voice_zh_20260926.md">Mandarin reference (2026-09-26)</a>
     <a href="eval/mmv_format_12b_qat_20260924.md">Earlier trial on HOLD (2026-09-24)</a>
   </p>
+
+  <h2>English first</h2>
+  <p>Docs, UI, prompts and tests are written for English. On 8 held-out English FLEURS clips (3 runs each, identical output), <strong>no word or number changed on any clip and no clip fell back</strong> to the raw transcript: the delivered words are Whisper's own — the formatter is designed not to change them (enforced by the preservation check, covered by tests). A rewrite-style formatter (the approach used up to v0.1) can silently change words — on one of the same clips it reworded a list, and on another it returned a request for the transcript instead of formatted text.</p>
+  <p class="note">Known limitation: on this panel English punctuation got worse — each of the 7 changed clips gained a semicolon the reference lacks, in 4 replacing an existing comma. Only the words are guaranteed, not the punctuation (position F1 flat 0.766 → 0.769; type-aware 0.681 → 0.500). Small read-speech panel (8 clips; Wilson 95% for 8/8: 68–100%); FLEURS training overlap unresolved; noisy, multi-speaker and long recordings untested.</p>
 
   <h2>What it does</h2>
   <ul>
@@ -53,9 +58,11 @@
   <table>
     <thead><tr><th>Panel</th><th class="num">Candidate accepted</th><th class="num">Source retained</th><th class="num">Punctuation-position F1</th></tr></thead>
     <tbody>
+      <tr><td>English, 8 held-out clips × 3 (2026-09-24; repeats identical)</td><td class="num">8/8 clips</td><td class="num">0/8</td><td class="num">0.766 → 0.769</td></tr>
+      <tr><td>Mandarin (reference), 8 clips × 3 (2026-09-26)</td><td class="num">21/24 (7/8 clips)</td><td class="num">3/24</td><td class="num">0.278 → 0.786</td></tr>
       <tr><td>Japanese, 12 new clips × 3, v2 prompt</td><td class="num">91.7% (33/36)</td><td class="num">3/36</td><td class="num">0.857</td></tr>
       <tr><td>Japanese, same clips, previous v1 prompt</td><td class="num">83.3% (30/36)</td><td class="num">6/36</td><td class="num">0.857</td></tr>
-      <tr><td>English, 8 clips, regression</td><td class="num">8/8</td><td class="num">0/8</td><td class="num">—</td></tr>
+      <tr><td>English, same 8 clips, regression (pre-release build)</td><td class="num">8/8</td><td class="num">0/8</td><td class="num">—</td></tr>
     </tbody>
   </table>
   <p class="note">Acceptance means the candidate passed the preservation check, not that its punctuation is right. The position-accuracy metric is identical for both prompts (paired delta +0.001, 95% CI [−0.089, +0.088]). Small panels, read speech, no population guarantee. Details and failure cases are in the status report.</p>

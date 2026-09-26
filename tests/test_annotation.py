@@ -11,10 +11,10 @@ class AnnotationTests(unittest.TestCase):
   self.assertIn('numerals_changed',row['reason']);self.assertIn('numeric_expression_changed',row['review_flags'])
   self.assertEqual(row['annotation_scope'],'chunk')
   self.assertFalse(row['semantic_verified'])
- def test_rule_marker_survives_when_guard_passes(self):
-  # the uncertainty rule fires (might -> will) but no guard rule does (1 omitted token, 'will' is a function word)
+ def test_uncertainty_change_retains_source(self):
+  # Uncertainty changing into a promise must fail even when the lexical budget allows it.
   row=ReadableFormatter(lambda *a:self.result('We will deliver on Friday.')).format_chunk('we might deliver on friday','en')
-  self.assertEqual(row['status'],'formatted');self.assertTrue(row['text'].endswith('（※要確認）'));self.assertIn('uncertainty_changed',row['review_flags'])
+  self.assertEqual(row['status'],'source_retained');self.assertEqual(row['text'],'we might deliver on friday');self.assertIn('uncertainty_changed',row['review_flags'])
  def test_model_marked_phrase_and_clear_control(self):
   for out,scope in [('ネラ市（※要確認）です。','model_marked_spans'),('ネラ市です。','none')]:
    row=ReadableFormatter(lambda *a:self.result(out)).format_chunk('ネラ市です。','ja')

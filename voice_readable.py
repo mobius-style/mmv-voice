@@ -15,6 +15,8 @@ from voice_mmv import MMVFormatter, MODEL, numbers, local_endpoint, split_source
 PROFILE_PATH = Path(__file__).resolve().parent / 'profiles/mmv_readable_12b_qat.json'
 PROMPT_PATH = PROFILE_PATH.with_name('readable_prompts.json')
 PROMPTS = json.loads(PROMPT_PATH.read_text(encoding='utf-8'))
+PROMPTS_12B_PATH = PROFILE_PATH.with_name('readable_prompts_12b.json')
+PROMPTS_12B = json.loads(PROMPTS_12B_PATH.read_text(encoding='utf-8'))
 # Narrow lexicon (v0.2.8 review): single-character Chinese and bare Japanese adjective
 # negations flagged almost every ordinary edit, so the chunk-level warning carried no information.
 # Only the COUNT of negation / uncertainty expressions is compared, so an equivalent
@@ -80,8 +82,17 @@ def _kana_run_is_functional(run, source_runs=()):
         if not step: return False
         i += step
     return True
+# Exact lexical signals protect uncertainty and conditions from the one-token omission allowance.
+# This is conservative, not a semantic verifier (scope and reassignment can still escape).
+CRITICAL_EXPRESSIONS = {
+    'en': re.compile(r"\b(?:may|might|could|perhaps|probably|possibly|unless|if|until)\b", re.I),
+    'ja': re.compile(r'かもしれ(?:ません|ない)|たぶん|多分|おそらく|恐らく|見込み|可能性|場合|なら|限り'),
+    'zh': re.compile(r'可能|也许|大概|或许|如果|除非|只有|才能'),
+}
+# Personal pronouns are deliberately NOT function words here: swapping he/she/we/they re-assigns who did
+# something with every other word intact, so a pronoun that appears in the draft but not in the source is content.
 EN_FUNCTION = {'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'am', 'to', 'of', 'and', 'or', 'but', 'that',
-               'which', 'who', 'it', "it's", 'its', 'we', 'i', 'you', 'they', 'he', 'she', 'in', 'on', 'at', 'for', 'with', 'this',
+               'which', 'who', "it's", 'its', 'in', 'on', 'at', 'for', 'with', 'this',
                'these', 'those', 'there', 'here', 'has', 'have', 'had', 'do', 'does', 'did', 'so', 'then', 'than', 'as', 'by',
                'from', 'into', 'about', 'if', 'when', 'while', 'because', 'also', 'very', 'will', 'would', 'can', 'could', 'should'}
 ZH_FUNCTION = set('的了是在和与及而并也都就这那个们把被让给对为于所以之其一着过吗呢吧')
@@ -124,7 +135,7 @@ def readable_postcondition(source, candidate, lang='ja'):
     from collections import Counter
     key = _lang_key(lang)
     violations = []
-    if sorted(numbers(source)) != sorted(numbers(candidate.replace('（※要確認）', ''))):
+    if numbers(source) != numbers(candidate.replace('（※要確認）', '')):
         violations.append('numerals_changed')
     src = _content_tokens(source, key); cand = Counter(_content_tokens(candidate, key))
     omitted = sum((Counter(_without_fillers(src, key)) - cand).values())
@@ -135,6 +146,12 @@ def readable_postcondition(source, candidate, lang='ja'):
     neg = GUARD_NEGATION[key]
     if len(neg.findall(source.lower())) != len(neg.findall(candidate.replace('（※要確認）', '').lower())):
         violations.append('negation_count_changed')
+    # Uncertainty must not become a claim merely because one omitted token is allowed.
+    if 'uncertainty_changed' in diagnostics(source, candidate):
+        violations.append('uncertainty_changed')
+    critical = CRITICAL_EXPRESSIONS[key]
+    if Counter(critical.findall(source.lower())) != Counter(critical.findall(candidate.replace('（※要確認）', '').lower())):
+        violations.append('condition_or_modality_changed')
     added = Counter(_content_tokens(candidate, key)) - Counter(src)
     if key == 'en':
         new = [t for t in added.elements() if t not in EN_FUNCTION and t not in FILLERS['en'] and not t.isdigit()]
@@ -149,6 +166,19 @@ def readable_postcondition(source, candidate, lang='ja'):
         new = [c for c in added.elements() if c not in ZH_FUNCTION and not c.isdigit()]
     if new:
         violations.append('content_added:' + ' '.join(sorted(set(new))[:6]))
+    # Counters alone allow swapping people or events while keeping every word.
+    # Require surviving content tokens to keep their relative order. Grammar words
+    # remain editable; their changed scope is still outside this heuristic's proof.
+    def ordered_content(text):
+        tokens = _content_tokens(text, key)
+        if key == 'en':
+            return [t for t in tokens if t not in EN_FUNCTION and t not in FILLERS['en']]
+        if key == 'ja':
+            return [t for t in tokens if _KANJI.match(t) or t.isascii() and t.isalnum()]
+        return [t for t in tokens if t not in ZH_FUNCTION]
+    remaining = iter(ordered_content(source))
+    if any(not any(s == token for s in remaining) for token in ordered_content(candidate)):
+        violations.append('content_order_changed')
     return violations
 
 
@@ -239,7 +269,8 @@ class ReadableFormatter(MMVFormatter):
             row['reason'] = 'unsplittable_token_too_long'
             return row
         lang = (lang or 'ja').split('-')[0].split('_')[0]
-        instruction = PROMPTS.get(lang, PROMPTS['en'])
+        prompts = PROMPTS_12B if self.profile['model_id'] == MODEL else PROMPTS
+        instruction = prompts.get(_lang_key(lang), prompts['en'])
         row['prompt_sha256'] = hashlib.sha256(instruction.encode()).hexdigest()
         start = time.monotonic()
         try:

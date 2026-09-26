@@ -183,6 +183,21 @@ marking examples (E3) after a frozen comparison: markers on real errors
 0 → 3 on the clips, none on the meeting for any English prompt — English
 marking remains weak.
 
+**v0.2.13 (12B only, [report](eval/mmv_12b_polish_20260927.md)):** the
+Japanese and Mandarin readable prompts for the 12B model now ask for local
+edits that keep content words and their order; each was adopted by a
+per-language frozen rule on 72 new FLEURS clips (Japanese CER 5.12 → 4.77%,
+punctuation F1 0.63 → 0.68; Mandarin CER unchanged, punctuation F1 0.90 →
+0.95; a proposed English prompt lowered punctuation F1 and was rejected, so
+English keeps E3). The guard also gained three rules for all languages:
+numerals must keep their order, a changed uncertainty or conditional
+expression retains the source instead of only marking it, and surviving
+content tokens must keep their relative order (so two people cannot swap
+roles with the same words); English personal pronouns count as content
+after review found he → she passing unnoticed. Applied to every earlier
+held-out output, the new rules retain no additional chunk. The 26B prompt is unchanged and was
+not re-evaluated with the new rules.
+
 A sibling of [mobius-style/mmv](https://github.com/mobius-style/mmv): every
 LLM call goes through the MMV harness, never a raw API. v0.2 replaced the
 v0.1 rewrite-style formatter with this minimal-edit one; v0.1 remains
@@ -502,6 +517,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.13` | 2026-09-27 | readable draft, 12B: Japanese and Mandarin prompts narrowed to local edits (selected per language on 72 new clips; English unchanged); guard adds ordered numerals, uncertainty/condition retention and content-order rule; GPU status tolerates a failed CUDA device |
 | `v0.2.12` | 2026-09-26 | guard validated on a second meeting (report in `eval/`); Japanese added-content rule no longer flags a source name wrapped in new particles; English readable prompt E3 (worked marking examples) adopted by frozen rule |
 | `v0.2.11` | 2026-09-26 | English-only comments and code-spanned examples (gate compliance; no behaviour change) |
 | `v0.2.10` | 2026-09-26 | readable draft: bounded-edit guard (numerals and negation count unchanged, content loss ≤ min(15, max(1, 3/100)), no added content incl. Japanese kana words) keeps the source chunk on violation; readable checkbox disabled while the cloud engine is selected |

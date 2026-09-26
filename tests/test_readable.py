@@ -30,7 +30,7 @@ class ReadableTests(unittest.TestCase):
             self.assertEqual(text,out);self.assertEqual(rows[0]['reason'],'draft_for_review')
             self.assertFalse(rows[0]['human_verified']);self.assertFalse(rows[0]['semantic_verified'])
             self.assertNotIn('Correction of the premise:',text)
-            req=Handler.requests[-1];self.assertEqual(req['prompt'],vr.PROMPTS[lang]+json.dumps({'transcript':src},ensure_ascii=False))
+            req=Handler.requests[-1];self.assertEqual(req['prompt'],vr.PROMPTS_12B[lang]+json.dumps({'transcript':src},ensure_ascii=False))
         self.assertEqual(len(Handler.requests),3)
         self.assertTrue(all(self.client.profile[k] is False for k in ['route_transformer','post_validator','force_reanchor_v2']))
     def test_diagnostics_calibrated_changed_and_unchanged(self):
@@ -94,9 +94,9 @@ class ReadableTests(unittest.TestCase):
             body=open(path,encoding='utf-8').read()
         self.assertIn('format_mode: readable',body);self.assertIn('human_verified: false',body)
     def test_flags_do_not_silently_revert_or_certify(self):
-        # A dropped uncertainty word trips a review rule but not the guard: delivered with a marker, never silently.
+        # A changed uncertainty expression now retains the source; a marker cannot legitimize certainty.
         Handler.content='We will deliver on Friday.';out,rows=self.client.format('we might deliver on friday','en')
-        self.assertTrue(out.startswith(Handler.content));self.assertIn('（※要確認）',out);self.assertIn('uncertainty_changed',rows[0]['review_flags']);self.assertTrue(rows[0]['needs_review'])
+        self.assertEqual(out,'we might deliver on friday');self.assertIn('uncertainty_changed',rows[0]['guard_violations']);self.assertIn('uncertainty_changed',rows[0]['review_flags']);self.assertTrue(rows[0]['needs_review'])
         report=audit_report(rows);self.assertIn('NOT verified',report);self.assertIn('might',report);self.assertIn('[changes]',report);self.assertIn('diagnostic rules: 3',report)
         # Dropping a whole uncertainty word in a short Japanese chunk is content loss: the guard keeps the source.
         Handler.content='来週です。';out2,rows2=self.client.format('たぶん来週です','ja');self.assertEqual(out2,'たぶん来週です');self.assertIn('omission_over_limit',rows2[0]['reason'])

@@ -608,7 +608,11 @@ def get_best_gpu():
     best_id, best_free = None, 0.0
     if torch.cuda.is_available():
         for i in range(torch.cuda.device_count()):
-            free = get_free_vram_gb(i)
+            try:
+                free = get_free_vram_gb(i)
+            except (RuntimeError, AssertionError):
+                # A failed device must not prevent CPU fallback or another usable GPU.
+                continue
             if free > best_free:
                 best_id, best_free = i, free
     return best_id
@@ -620,10 +624,13 @@ def gpu_info_str():
         return "GPU: none (CPU mode)"
     lines = []
     for i in range(torch.cuda.device_count()):
-        prop  = torch.cuda.get_device_properties(i)
-        total = prop.total_memory / 1024**3
-        free  = get_free_vram_gb(i)
-        lines.append(f"GPU{i}: {prop.name}  free {free:.1f}/{total:.1f}GB")
+        try:
+            prop = torch.cuda.get_device_properties(i)
+            total = prop.total_memory / 1024**3
+            free = get_free_vram_gb(i)
+            lines.append(f"GPU{i}: {prop.name}  free {free:.1f}/{total:.1f}GB")
+        except (RuntimeError, AssertionError) as exc:
+            lines.append(f"GPU{i}: unavailable ({type(exc).__name__}); check CUDA/device settings")
     return "  |  ".join(lines)
 
 

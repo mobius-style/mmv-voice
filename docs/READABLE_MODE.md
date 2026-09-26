@@ -8,6 +8,26 @@ pre-selects it). It is a draft generator, not a verbatim transcript and not a
 semantic-fidelity certificate. The original recognition text is kept alongside
 the candidate and a diff in the Review tab.
 
+## 12B editing profile (2026-09-27)
+
+The 12B path uses `profiles/readable_prompts_12b.json`. Japanese and Mandarin
+instructions now request local edits and preserve content-word order, alternatives
+and self-corrections. English keeps the published E3 wording: the proposed
+replacement reduced punctuation quality in the comparison and was not adopted. The 26B prompt stays
+in `profiles/readable_prompts.json`; model weights are unchanged.
+
+Uncertainty and conditional expressions now have conservative source-retention
+checks: a marker does not make a change from “might” to “will” acceptable.
+Number order is checked as well as the values; surviving content tokens must
+keep their relative order (English words, Japanese kanji/ASCII, Chinese
+non-function characters). These checks still do not prove
+semantic fidelity or detect all changes in scope, roles or relationships.
+English personal pronouns (I, you, he, she, it, we, they) count as content
+words, so a pronoun that appears in the draft but not in the source retains
+the chunk; a modal such as "may" is matched case-insensitively and can
+collide with the month name. Any language other than Japanese and Mandarin
+is processed with the English prompt and the English guard rules.
+
 ## Kept from the default path
 
 - Local-only Ollama endpoint (loopback check) and model tag + digest checks
@@ -46,11 +66,15 @@ source chunk and keeps the source (status `source_retained`, reason
 `readable_guard: …`, the draft and a diff still shown in Review) when any of
 these holds:
 
-- the multiset of numerals differs (`numerals_changed`) — an explicit
+- the ordered sequence of numerals differs (`numerals_changed`) — an explicit
   self-correction that keeps both values passes, one that drops the first
   value does not; kanji numerals and number words are not recognised;
 - the number of negation expressions differs (`negation_count_changed`) — a
   dropped "not" or an added `ません` is one token and would otherwise pass;
+- surviving content tokens change relative order (`content_order_changed`);
+- uncertainty-expression counts differ (`uncertainty_changed`), or the
+  per-expression counts in a small language-specific condition/modality lexicon
+  differ (`condition_or_modality_changed`); legitimate paraphrases may be retained;
 - more than min(15, max(1, 3 per 100 source tokens)) content tokens are
   missing from the draft, after removing an unambiguous filler list (um, uh,
   okay, well, `えー`, `あのー`, `嗯` … and the phrases "you know" / "I mean" /
@@ -86,6 +110,12 @@ kept as `candidate` / `model_candidate`; `text` is the delivered, annotated
 version.
 
 ## Validation so far
+
+- 2026-09-27: 12B-only, two rounds / 72 fresh FLEURS clips, 540 outputs.
+  Japanese and Mandarin prompt changes adopted by per-language rules; English
+  prompt unchanged. All three use the strengthened guard. This is an exploratory
+  selection panel, not independent proof of general quality.
+  See `eval/mmv_12b_polish_20260927.md`.
 
 - 2026-09-26, held-out outputs used to set the thresholds: meeting chunks
   kept as source 14/18 (12B) and 15/18 (26B); read speech 3/36 English.

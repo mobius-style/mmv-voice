@@ -71,10 +71,21 @@ system-level is missing. Details and manual steps: [Setup](#setup).
 3. **Read the result** in the right pane. Chunks whose candidate failed the
    word-and-number check are shown unformatted, exactly as Whisper wrote
    them.
-4. **Check the "Verification report" tab** if you want to see, per chunk,
+4. **Check the "Review" tab** if you want to see, per chunk,
    the source, the model's candidate and why it was accepted or rejected.
 5. **Save** the text, or (optional) export minutes or a digest file.
-   "Stop Whisper → format" formats whatever has been transcribed so far.
+   "Stop after current segment" keeps the segments already shown, releases
+   Whisper, then formats them. It does not interrupt a model call instantly, and
+   text of the current 30-second window that was decoded but not yet displayed
+   is discarded.
+
+![Desktop workspace](docs/desktop-workspace.png)
+
+Use **Ctrl+O** to open a recording and **Ctrl+S** to save the selected result
+tab as UTF-8 text. The original and result panes are read-only; copy or export
+for editing. **Optional steps** holds the extra processing settings. Progress
+shows the active stage and elapsed time; opening another file is disabled
+until processing finishes.
 
 Optional features — speaker attribution, an extra LLM fidelity pass,
 minutes — are off by default and use the same local model. (If you
@@ -177,7 +188,7 @@ Record: [eval/mmv_voice_zh_20260926.md](eval/mmv_voice_zh_20260926.md).
 2. **Formatting (default engine: MMV-Format, local)** — punctuation and
    paragraph breaks only. Each chunk's candidate must pass a
    lexical/numeric preservation check; otherwise the unformatted source is
-   retained and the "Verification report" tab shows source, candidate and
+   retained and the "Review" tab shows source, candidate and
    rejection reason.
 3. **Speaker attribution (optional, off by default)** — pyannote.audio if
    installed and gated models are approved; otherwise text-based
@@ -323,8 +334,9 @@ bash launch.sh
 
 or install `whisper_tool.desktop` (edit its `Exec=` path) and use the
 desktop icon. Pick an audio file; transcription starts immediately and
-formatting follows. "Stop Whisper → format" formats what has been
-transcribed so far.
+formatting follows. "Stop after current segment" keeps the segments shown so
+far and formats them after Whisper releases its resources (the remainder of the
+current 30-second window is discarded).
 
 ## Configuration
 
@@ -350,13 +362,13 @@ If the MMV harness or the formatting profile cannot be loaded, formatting
 is disabled with a visible error; there is no silent fallback to a raw
 model call.
 
-## Verification report, minutes and digest
+## Review tab, minutes and digest
 
-- **Verification report tab** — for every chunk: status (formatted /
+- **Review tab** — for every chunk: status (formatted /
   unchanged / source retained), reason, source text and model candidate.
   With the optional fidelity check on, the LLM verdicts are appended and
   flagged chunks are marked `⚠️` in the formatted text.
-- **Minutes tab** — Markdown; sections without content read "(none)"; the
+- **Notes tab** — Markdown; sections without content read "(none)"; the
   instruction forbids adding anything not in the transcript.
 - **Secretary digest** — written to
   `$MMV_REPO/addons/secretary/state/digests/voice_note_<ts>.md` with
@@ -366,8 +378,12 @@ model call.
 ## Tests
 
 ```bash
-python3 -m pytest -q tests/
+CUDA_VISIBLE_DEVICES="" xvfb-run -a python3 -m unittest discover -s tests -v
 ```
+
+Desktop tests require Tk and Xvfb (or an existing display). They cover the
+main-thread event queue, cooperative stop, save/export and minimum window
+layout without loading a GPU model.
 
 Covers the real harness path through a local HTTP fixture, rejection of
 word/number changes, model-digest mismatch, exception handling that keeps
@@ -393,6 +409,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.5` | 2026-09-26 | desktop UI refresh: one workspace (source and result side by side), main-thread event queue, sequential stop → release → format lifecycle, UTF-8 text export (Ctrl+O / Ctrl+S), elapsed time and explicit local/cloud state; responsive landing page. No change to prompts, profiles, validator or chunking |
 | `v0.2.4` | 2026-09-26 | English prompt: semicolon hint removed (measured on 12 new clips); `install.sh` one-command local installer (also pre-fetches Whisper weights so work is offline); local-first README and diagrams; long-meeting result documented |
 | `v0.2.3` | 2026-09-26 | documentation only: English results as the lead topic of the README and landing page; Mandarin reference measurement added in `eval/` |
 | `v0.2.2` | 2026-09-25 | documentation only: local-first wording, Hugging Face metadata (v0.2.1 had invalid Space metadata) |

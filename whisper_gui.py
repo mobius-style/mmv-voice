@@ -8,6 +8,9 @@ See README.md for startup and validation limits.
 import tkinter as tk
 from tkinter import filedialog, scrolledtext, messagebox, ttk
 import threading
+import queue
+from pathlib import Path
+from desktop_ui import WorkspaceUI
 import sys
 import os
 import io
@@ -114,23 +117,32 @@ MMV_MODEL = MMV_M["model"] if MMV_M else "12B QAT q4_0"
 # ─────────────────────────────────────────────────────────
 # Real-time capture of Whisper stdout
 # ─────────────────────────────────────────────────────────
+class TranscriptionStopped(Exception):
+    """Cooperative stop at a completed Whisper output boundary."""
+
+
 class WhisperOutputCapture(io.StringIO):
-    """
-    Intercepts the standard output of whisper.transcribe(verbose=True)
-    and forwards it line by line to a callback.
-    Example: "[00:00.000 --> 00:05.000]  Hello"
-    """
-    def __init__(self, line_callback):
+    def __init__(self, line_callback, stop_event=None):
         super().__init__()
-        self._cb  = line_callback
+        self._cb = line_callback
         self._buf = ""
+        self.stop_event = stop_event
+        self.lines = []
+        self.language = None
 
     def write(self, text):
         self._buf += text
         while "\n" in self._buf:
             line, self._buf = self._buf.split("\n", 1)
             if line.strip():
+                if line.startswith("Detected language:"):
+                    name = line.split(":", 1)[1].strip().lower()
+                    self.language = whisper.tokenizer.TO_LANGUAGE_CODE.get(name)
+                if re.match(r"^\s*\[[\d:.]+\s*-->\s*[\d:.]+\]", line):
+                    self.lines.append(re.sub(r"^\s*\[[\d:.]+\s*-->\s*[\d:.]+\]\s*", "", line))
                 self._cb(line)
+            if self.stop_event is not None and self.stop_event.is_set():
+                raise TranscriptionStopped()
         return len(text)
 
     def flush(self):
@@ -566,9 +578,8 @@ def get_free_vram_gb(gpu_id):
     """Return the free VRAM (GB) of the given GPU"""
     if not torch.cuda.is_available():
         return 0.0
-    total    = torch.cuda.get_device_properties(gpu_id).total_memory / 1024**3
-    reserved = torch.cuda.memory_reserved(gpu_id) / 1024**3
-    return total - reserved
+    free_bytes, _ = torch.cuda.mem_get_info(gpu_id)
+    return free_bytes / 1024**3
 
 
 def get_best_gpu():
@@ -595,7 +606,7 @@ def gpu_info_str():
     return "  |  ".join(lines)
 
 
-def wait_for_vram(gpu_id, required_gb, timeout_sec, progress_cb):
+def wait_for_vram(gpu_id, required_gb, timeout_sec, progress_cb, stop_event=None):
     """
     Wait until the free VRAM of the given GPU exceeds required_gb.
     Returns False if it cannot be secured within timeout_sec seconds.
@@ -608,17 +619,28 @@ def wait_for_vram(gpu_id, required_gb, timeout_sec, progress_cb):
         if free >= required_gb:
             return True
         progress_cb(f"Waiting for VRAM… GPU{gpu_id}: free {free:.1f}GB / required {required_gb:.1f}GB ({i+1}/{timeout_sec}s)")
-        time.sleep(1)
+        if stop_event is not None:
+            if stop_event.wait(1):
+                raise TranscriptionStopped()
+        else:
+            time.sleep(1)
     return False
 
 
 # ─────────────────────────────────────────────────────────
 # GUI main class
 # ─────────────────────────────────────────────────────────
-class WhisperMMVGUI:
+class WhisperMMVGUI(WorkspaceUI):
 
     def __init__(self, master):
         self.master = master
+        self._main_thread = threading.get_ident()
+        self._events = queue.SimpleQueue()
+        self._closed = False
+        self._busy = False
+        self._checking = False
+        self._started_at = None
+        self._cloud_available = MMV_L is not None
         master.title(f"Whisper {WHISPER_MODEL_SIZE} + {MMV_RELEASE} ({MMV_MODEL})  Voice Formatting Tool")
         master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -643,6 +665,8 @@ class WhisperMMVGUI:
         self.last_result       = None   # Kept for saving the digest
 
         self._build_ui()
+        self._job_settings = self._snapshot_options()
+        self._pump_id = self.master.after(40, self._drain_events)
 
         # Startup check (in a thread so it does not block GUI startup)
         threading.Thread(target=self._startup_check, daemon=True).start()
@@ -650,120 +674,10 @@ class WhisperMMVGUI:
     # ─────────────────────────────────────────
     # UI construction
     # ─────────────────────────────────────────
-    def _build_ui(self):
-        m = self.master
-
-        # Top status bar
-        bar = tk.Frame(m, bg="#f0f0f0", pady=4)
-        bar.pack(fill="x")
-        tk.Label(bar, textvariable=self.mode_var,
-                 fg="#1a4a8a", bg="#f0f0f0",
-                 font=("Meiryo", 10, "bold")).pack(side="left", padx=8)
-        tk.Label(bar, textvariable=self.status_var,
-                 fg="#555", bg="#f0f0f0",
-                 font=("Meiryo", 9)).pack(side="left", padx=4)
-
-        # Text areas (split left/right)
-        pane = tk.Frame(m)
-        pane.pack(expand=True, fill="both", padx=6, pady=4)
-
-        # Left: raw Whisper log
-        lf = tk.LabelFrame(pane, text=" Whisper raw log (real-time) ",
-                            fg="navy", font=("Meiryo", 10, "bold"))
-        lf.pack(side="left", expand=True, fill="both", padx=(0, 3))
-        self.whisper_textbox = scrolledtext.ScrolledText(
-            lf, font=("Meiryo", 9), width=54, height=26, wrap="word")
-        self.whisper_textbox.pack(expand=True, fill="both")
-        self.whisper_progress = tk.Label(
-            lf, text="", fg="green", font=("Meiryo", 9))
-        self.whisper_progress.pack()
-        tk.Button(lf, text="Copy all",
-                  command=lambda: self.copy_to_clipboard(self.whisper_textbox)
-                  ).pack(pady=2)
-
-        # Right: MMV output tabs (formatted / minutes / fidelity report)
-        rf = tk.LabelFrame(pane, text=f" {MMV_RELEASE} ({MMV_MODEL})  Output ",
-                            fg="purple", font=("Meiryo", 10, "bold"))
-        rf.pack(side="left", expand=True, fill="both", padx=(3, 0))
-        self.notebook = ttk.Notebook(rf)
-        self.notebook.pack(expand=True, fill="both")
-
-        self.fmt_textbox      = self._make_tab("Formatted")
-        self.minutes_textbox  = self._make_tab("Minutes")
-        self.fidelity_textbox = self._make_tab("Fidelity Report")
-
-        self.fmt_progress = tk.Label(
-            rf, text="Waiting for input.", fg="gray", font=("Meiryo", 9))
-        self.fmt_progress.pack()
-        tk.Button(rf, text="Copy all from current tab",
-                  command=self.copy_active_tab).pack(pady=2)
-
-        # Options row
-        of = tk.Frame(m)
-        of.pack(pady=2)
-        tk.Checkbutton(of, text="Speaker attribution", variable=self.opt_speaker,
-                       font=("Meiryo", 10)).pack(side="left", padx=8)
-        tk.Checkbutton(of, text="Fidelity check", variable=self.opt_fidelity,
-                       font=("Meiryo", 10)).pack(side="left", padx=8)
-        tk.Checkbutton(of, text="Generate minutes", variable=self.opt_minutes,
-                       font=("Meiryo", 10)).pack(side="left", padx=8)
-
-        # Engine selector row (default = local M / optional = cloud L 120B)
-        ef = tk.Frame(m)
-        ef.pack(pady=2)
-        tk.Label(ef, text="Engine:", font=("Meiryo", 10, "bold")
-                 ).pack(side="left", padx=(8, 4))
-        tk.Radiobutton(
-            ef, text=f"MMV formatting ({MMV_MODEL} · local)",
-            variable=self.engine_var, value="M",
-            font=("Meiryo", 10)).pack(side="left", padx=4)
-        label_l = (f"MMV-L ({MMV_L['model']} · Groq cloud)"
-                   if MMV_L else "MMV-L (unavailable)")
-        self.engine_l_btn = tk.Radiobutton(
-            ef, text=label_l, variable=self.engine_var, value="L",
-            font=("Meiryo", 10), fg="#a05000",
-            command=self._confirm_cloud_engine)
-        self.engine_l_btn.pack(side="left", padx=4)
-        if MMV_L is None:
-            self.engine_l_btn.config(state="disabled")
-
-        # Button row
-        bf = tk.Frame(m)
-        bf.pack(pady=6)
-        self.select_btn = tk.Button(
-            bf, text="🎙  Select audio file → Start",
-            font=("Meiryo", 11), width=26, command=self.select_file)
-        self.select_btn.pack(side="left", padx=6)
-
-        self.kill_btn = tk.Button(
-            bf, text="⏹  Stop Whisper → MMV formatting",
-            font=("Meiryo", 11), fg="red", width=24,
-            command=self.kill_whisper, state="disabled")
-        self.kill_btn.pack(side="left", padx=6)
-
-        self.digest_btn = tk.Button(
-            bf, text="📤  Save to secretary digest",
-            font=("Meiryo", 11), width=20,
-            command=self.save_digest, state="disabled")
-        self.digest_btn.pack(side="left", padx=6)
-
-        self._add_context_menu(self.whisper_textbox)
-        for tb in (self.fmt_textbox, self.minutes_textbox,
-                   self.fidelity_textbox):
-            self._add_context_menu(tb)
-
-    def _make_tab(self, title):
-        frame = tk.Frame(self.notebook)
-        self.notebook.add(frame, text=title)
-        tb = scrolledtext.ScrolledText(
-            frame, font=("Meiryo", 9), width=54, height=24, wrap="word")
-        tb.pack(expand=True, fill="both")
-        return tb
-
     def copy_active_tab(self):
         idx = self.notebook.index(self.notebook.select())
-        tb = (self.fmt_textbox, self.minutes_textbox,
-              self.fidelity_textbox)[idx]
+        tb = (self.fmt_textbox, self.fidelity_textbox,
+              self.minutes_textbox)[idx]
         self.copy_to_clipboard(tb)
 
     def _confirm_cloud_engine(self):
@@ -777,6 +691,7 @@ class WhisperMMVGUI:
             "Processing will no longer be fully local. Continue?")
         if not ok:
             self.engine_var.set("M")
+        self._refresh_privacy()
 
     def _active_engine(self):
         """Return the binding of the currently selected MMV engine."""
@@ -787,20 +702,66 @@ class WhisperMMVGUI:
     # ─────────────────────────────────────────
     # Startup check (background)
     # ─────────────────────────────────────────
-    def _startup_check(self):
-        gpu_str    = gpu_info_str()
-        ok, ol_msg = check_mmv_ready()
-        self.ui(lambda: self.mode_var.set(gpu_str))
-        self.ui(lambda: self.status_var.set(ol_msg))
-        if not ok:
-            self.ui(lambda: messagebox.showwarning("MMV not ready", ol_msg))
+    def _snapshot_options(self):
+        return {"engine": self._active_engine(), "speaker": self.opt_speaker.get(),
+                "fidelity": self.opt_fidelity.get(), "minutes": self.opt_minutes.get()}
 
-    # ─────────────────────────────────────────
-    # UI helpers
-    # ─────────────────────────────────────────
+    def _refresh_privacy(self):
+        cloud = self.engine_var.get() == "L"
+        self.privacy_var.set("CLOUD SELECTED" if cloud else "LOCAL PROCESSING")
+        self.privacy_badge.config(bg="#FFF0D9" if cloud else "#DFF1ED", fg="#895A12" if cloud else "#176855")
+
+    def recheck_connection(self):
+        if self._checking or self._closed:
+            return
+        self.status_var.set("Checking the local model connection…")
+        threading.Thread(target=self._startup_check, daemon=True).start()
+
+    def _startup_check(self):
+        self._checking = True
+        try:
+            gpu_str = gpu_info_str()
+            ok, message = check_mmv_ready()
+            self.ui(lambda: self.mode_var.set(gpu_str))
+            # A late startup probe must not overwrite live job status.
+            self.ui(lambda: self.status_var.set(message) if not self._busy else None)
+        finally:
+            self._checking = False
+
     def ui(self, func):
-        """Thread-safe UI update from a background thread"""
-        self.master.after(0, func)
+        """Workers enqueue Python callbacks; only the Tk thread touches widgets."""
+        if self._closed:
+            return
+        if threading.get_ident() == self._main_thread:
+            func()
+        else:
+            self._events.put(func)
+
+    def _drain_events(self):
+        if self._closed:
+            return
+        # Bound each tick, so a long transcript cannot starve keyboard/repaint events.
+        for _ in range(128):
+            try:
+                func = self._events.get_nowait()
+            except queue.Empty:
+                break
+            try:
+                func()
+            except Exception:
+                self.master.report_callback_exception(*sys.exc_info())
+        if self._busy and self._started_at is not None:
+            elapsed = int(time.monotonic() - self._started_at)
+            self.elapsed_var.set(f"{elapsed // 60:02d}:{elapsed % 60:02d}")
+        self._pump_id = self.master.after(40, self._drain_events)
+
+    def _stage(self, stage, title):
+        def update():
+            self.stage_var.set(title)
+            for i, label in enumerate(self.step_labels):
+                label.config(fg="#087F8C" if i == stage else "#627681",
+                             font=("DejaVu Sans", 10, "bold" if i == stage else "normal"))
+        self.ui(update)
 
     def _add_context_menu(self, tb):
         menu = tk.Menu(tb, tearoff=0)
@@ -814,29 +775,76 @@ class WhisperMMVGUI:
             txt = tb.get(tk.SEL_FIRST, tk.SEL_LAST)
         except tk.TclError:
             txt = tb.get("1.0", tk.END)
+        if not txt.strip():
+            return
         self.master.clipboard_clear()
         self.master.clipboard_append(txt)
 
     def _set_textbox(self, tb, text):
-        self.ui(lambda: (tb.delete("1.0", tk.END), tb.insert(tk.END, text)))
+        self.ui(lambda: self._replace_text(tb, text))
 
     def _append_whisper_line(self, line):
-        self.ui(lambda: (
-            self.whisper_textbox.insert(tk.END, line + "\n"),
-            self.whisper_textbox.see(tk.END)
-        ))
+        def append():
+            tb = self.whisper_textbox
+            follow = tb.yview()[1] >= .98
+            tb.configure(state="normal")
+            tb.insert(tk.END, line + "\n")
+            tb.configure(state="disabled")
+            if follow:
+                tb.see(tk.END)
+        self.ui(append)
 
     def _set_processing(self, active):
+        self._busy = active
         self.select_btn.config(state="disabled" if active else "normal")
+        for widget in self.option_widgets + [self.engine_m_btn, self.engine_l_btn]:
+            widget.config(state="disabled" if active else "normal")
+        if not self._cloud_available:
+            self.engine_l_btn.config(state="disabled")
         self.kill_btn.config(state="normal" if active else "disabled")
+        if active:
+            self._started_at = time.monotonic()
+            self.progressbar.configure(mode="indeterminate")
+            self.progressbar.start(12)
+        else:
+            self.progressbar.stop()
+            self.progressbar.configure(mode="determinate", value=100 if self.last_result else 0)
+            ready = self.last_result is not None
+            for button in [self.copy_btn, self.export_btn, self.digest_btn]:
+                button.config(state="normal" if ready else "disabled")
 
     def _post_progress(self, msg):
+        self._stage(1, "Adding punctuation")
+        self.ui(lambda: self.kill_btn.config(state="disabled"))
         self.ui(lambda: self.fmt_progress.config(text=msg))
+
+    def export_text(self):
+        if self._busy or self.last_result is None:
+            return
+        idx = self.notebook.index(self.notebook.select())
+        boxes = (self.fmt_textbox, self.fidelity_textbox, self.minutes_textbox)
+        # The Transcript tab may show ⚠️ review markers; the file gets the clean formatted text (same as the digest).
+        text = self.last_result["formatted"] if idx == 0 else boxes[idx].get("1.0", "end-1c")
+        if not text.strip():
+            self.status_var.set("This tab has no content to save.")
+            return
+        suffix = ("transcript", "review", "notes")[idx]
+        path = filedialog.asksaveasfilename(title="Save " + suffix,
+            initialfile=f"{Path(self.current_audio or 'recording').stem}-{suffix}.txt",
+            defaultextension=".txt", filetypes=[("Text", "*.txt"), ("Markdown", "*.md")])
+        if path:
+            try:
+                Path(path).write_text(text, encoding="utf-8")
+                self.status_var.set(f"Saved {Path(path).name}")
+            except OSError as exc:
+                messagebox.showerror("Could not save", str(exc))
 
     # ─────────────────────────────────────────
     # File selection / start processing (main thread)
     # ─────────────────────────────────────────
     def select_file(self):
+        if self._busy or self._closed:
+            return
         filepath = filedialog.askopenfilename(
             title="Select an audio file",
             filetypes=[
@@ -846,6 +854,12 @@ class WhisperMMVGUI:
             ]
         )
         if not filepath:
+            return
+
+        # Nothing can run without the local formatter; say so before asking for any download.
+        self._job_settings = self._snapshot_options()
+        if self._job_settings["engine"] is None:
+            messagebox.showerror("Model unavailable", str(MMV_LOAD_ERR))
             return
 
         # Local-first: openai-whisper would silently download its weights on
@@ -870,12 +884,17 @@ class WhisperMMVGUI:
         self.last_segments     = None
         self.last_language     = None
         self.current_audio     = filepath
+        self.file_var.set(Path(filepath).name)
+        self.file_detail_var.set(f"{Path(filepath).stat().st_size / (1024 * 1024):.1f} MB · {Path(filepath).suffix.lstrip('.').upper()}")
+        self.review_var.set("Transcribing locally. Your original text will be preserved.")
+        self._stage(0, "Preparing your recording")
         self.last_result       = None
-        self.digest_btn.config(state="disabled")
-        self.whisper_textbox.delete("1.0", tk.END)
+        for button in [self.digest_btn, self.copy_btn, self.export_btn]:
+            button.config(state="disabled")
+        self._replace_text(self.whisper_textbox, "")
         for tb in (self.fmt_textbox, self.minutes_textbox,
                    self.fidelity_textbox):
-            tb.delete("1.0", tk.END)
+            self._replace_text(tb, "")
         self.whisper_progress.config(text="")
         self.fmt_progress.config(text="Processing starts after Whisper finishes.")
         self._set_processing(True)
@@ -901,100 +920,88 @@ class WhisperMMVGUI:
     # Whisper processing (background thread)
     # ─────────────────────────────────────────
     def run_whisper(self, audio_path):
+        capture = None
+        result = None
+        stopped = False
         try:
-            # ── Step 1: check free VRAM without stopping other processes
-            self.ui(lambda: self.whisper_progress.config(
-                text="Checking free VRAM…"))
-            # External inference servers belong to their owners; do not unload them.
-            time.sleep(0.1)
-
-            # ── Step 2: wait until enough VRAM is free
+            self._stage(0, "Transcribing your recording")
+            self.ui(lambda: self.whisper_progress.config(text="Finding an available device…"))
             gpu_id = get_best_gpu()
             if gpu_id is not None:
-                def progress_cb(msg):
-                    self.ui(lambda: self.whisper_progress.config(text=msg))
-
-                ok = wait_for_vram(gpu_id, MIN_FREE_VRAM_GB,
-                                   VRAM_WAIT_MAX_SEC, progress_cb)
+                ok = wait_for_vram(gpu_id, MIN_FREE_VRAM_GB, VRAM_WAIT_MAX_SEC,
+                    lambda msg: self.ui(lambda: self.whisper_progress.config(text=msg)), self.kill_flag)
                 if not ok:
-                    # Do our best even after a timeout (CPU fallback)
                     gpu_id = None
-                    self.ui(lambda: self.whisper_progress.config(
-                        text="Not enough VRAM; switching to CPU mode…"))
-                    time.sleep(1)
-
+            if self.kill_flag.is_set():
+                raise TranscriptionStopped()
             device = f"cuda:{gpu_id}" if gpu_id is not None else "cpu"
-            prop_str = ""
-            if gpu_id is not None:
-                prop  = torch.cuda.get_device_properties(gpu_id)
-                free  = get_free_vram_gb(gpu_id)
-                prop_str = f"GPU{gpu_id}: {prop.name} free {free:.1f}GB"
-            else:
-                prop_str = "CPU mode"
-
-            self.ui(lambda: self.status_var.set(f"Whisper running… [{prop_str}]"))
-
-            # ── Step 3: load the Whisper model (reload only when the device changed)
-            if self.whisper_model is None or self.whisper_device != device:
-                self.ui(lambda: self.whisper_progress.config(
-                    text=f"Loading Whisper model ({WHISPER_MODEL_SIZE})…"))
-                self.whisper_model  = whisper.load_model(
-                    WHISPER_MODEL_SIZE, device=device)
-                self.whisper_device = device
-
-            # ── Step 4: transcribe (capture stdout for real-time display)
-            self.ui(lambda: self.whisper_progress.config(
-                text="Transcribing… (real-time display)"))
-            capture    = WhisperOutputCapture(self._append_whisper_line)
+            self.ui(lambda: self.status_var.set(f"Transcribing on {device}. Audio stays on this computer."))
+            self.ui(lambda: self.whisper_progress.config(text="Loading the speech model…"))
+            self.whisper_model = whisper.load_model(WHISPER_MODEL_SIZE, device=device)
+            self.whisper_device = device
+            if self.kill_flag.is_set():
+                raise TranscriptionStopped()
+            self.ui(lambda: self.whisper_progress.config(text="Listening · text appears as segments finish"))
+            capture = WhisperOutputCapture(self._append_whisper_line, self.kill_flag)
             old_stdout = sys.stdout
             sys.stdout = capture
             try:
-                result = self.whisper_model.transcribe(
-                    audio_path, language=WHISPER_LANGUAGE, verbose=True)
+                result = self.whisper_model.transcribe(audio_path, language=WHISPER_LANGUAGE, verbose=True)
             finally:
                 sys.stdout = old_stdout
-
-            self.last_whisper_text = result["text"]
-            self.last_segments     = result.get("segments") or None
-            self.last_language     = result.get("language") or "ja"
-            self._set_textbox(self.whisper_textbox, result["text"])
-            self.ui(lambda: self.whisper_progress.config(text="✅ Whisper finished"))
-            self.ui(lambda: self.status_var.set(
-                "Whisper finished. Releasing VRAM and starting post-processing…"))
-
-            # ── Step 5: release Whisper's VRAM and move on to post-processing
-            self._release_whisper_model()
-            time.sleep(2)  # Wait for the cache clear to take effect
-            self.ui(lambda: self.mode_var.set(gpu_info_str()))
-
-            # If kill_flag is set, kill_whisper has already started post-processing
-            if not self.kill_flag.is_set():
-                self.post_thread = threading.Thread(
-                    target=self.run_postprocess,
-                    args=(self.last_whisper_text, self.last_segments,
-                          audio_path),
-                    daemon=True)
-                self.post_thread.start()
-
-        except Exception as e:
-            err = str(e)
-            self.ui(lambda: self.status_var.set(f"Whisper error: {err}"))
-            self.ui(lambda: self.whisper_progress.config(text="❌ Error"))
+        except TranscriptionStopped:
+            stopped = True
+            text = " ".join(capture.lines) if capture else ""
+            result = {"text": text, "segments": [], "language": (capture.language if capture else None) or WHISPER_LANGUAGE or "en"}
+            self.ui(lambda: self.status_var.set("Stopped. Formatting completed transcript segments only."))
+        except Exception as exc:
+            message = f"Transcription failed: {exc}"
+            self.ui(lambda: self.status_var.set(message))
+            self._stage(0, "Could not transcribe · try another recording")
+        finally:
+            # The inference owner releases its own model before formatting starts.
+            # A failing release (e.g. a CUDA error) must not strand the UI in the busy state.
+            try:
+                self._release_whisper_model()
+            except Exception as exc:
+                release_err = f"Model release failed: {exc}"
+                self.ui(lambda: self.status_var.set(release_err))
+            # S4: once Whisper has returned, Stop has nothing left to stop.
+            self.ui(lambda: self.kill_btn.config(state="disabled"))
+        if result is None or not result.get("text", "").strip():
+            self.ui(lambda: self.whisper_progress.config(text="No completed transcript segments."))
+            if stopped:
+                self.ui(lambda: self.status_var.set("Stopped before any segment completed."))
             self.ui(lambda: self._set_processing(False))
+            if result is not None:
+                self._stage(0, "No text captured · open another recording")
+            return
+        self.last_whisper_text = result["text"]
+        self.last_segments = result.get("segments") or None
+        self.last_language = result.get("language") or "en"
+        self._set_textbox(self.whisper_textbox, result["text"])
+        self._job_stopped = stopped
+        self.ui(lambda: self.whisper_progress.config(text="Partial transcript · stopped" if stopped else "Transcription complete"))
+        # N3: the window is gone; do not start formatting (or a cloud request) for nobody.
+        if self._closed:
+            return
+        # Sequential on the same worker: no second GPU job and no early re-enable.
+        self.run_postprocess(self.last_whisper_text, self.last_segments, audio_path)
 
     # ─────────────────────────────────────────
     # Post-processing (speakers → formatting → fidelity → minutes), background thread
     # ─────────────────────────────────────────
     def run_postprocess(self, text, segments, audio_path):
         try:
-            engine = self._active_engine()
+            settings = self._job_settings
+            engine = settings["engine"]
             lang   = self.last_language
             speaker_backend = None
             with_speakers   = False
             work_text       = text
 
             # ── Step 1: speaker attribution
-            if self.opt_speaker.get() and segments and len(segments) > 1:
+            if settings["speaker"] and segments and len(segments) > 1:
                 self._post_progress("Attributing speakers…")
                 work_text, speaker_backend = speaker_attribution(
                     audio_path, segments, self._post_progress, engine, lang)
@@ -1009,7 +1016,7 @@ class WhisperMMVGUI:
             fidelity_results = []
             fidelity_report  = audit_report(engine["format_audit"]) if engine.get("format_audit") is not None else ""
             display_text     = formatted
-            if self.opt_fidelity.get() and pairs:
+            if settings["fidelity"] and pairs:
                 fidelity_results = mmv_fidelity_check(
                     pairs, self._post_progress, engine, lang)
                 fidelity_report += "\n\n" + build_fidelity_report(fidelity_results)
@@ -1020,7 +1027,7 @@ class WhisperMMVGUI:
 
             # ── Step 4: minutes
             minutes = ""
-            if self.opt_minutes.get() and formatted.strip():
+            if settings["minutes"] and formatted.strip():
                 minutes = mmv_minutes(formatted, self._post_progress,
                                       engine, lang)
                 self._set_textbox(self.minutes_textbox, minutes)
@@ -1045,21 +1052,29 @@ class WhisperMMVGUI:
                 "minutes": minutes,
                 "fidelity_report": fidelity_report,
             }
-            self.ui(lambda: self.digest_btn.config(state="normal"))
+            rows = engine.get("format_audit", [])
+            counts = {key: sum(row["status"] == key for row in rows) for key in ("formatted", "unchanged", "source_retained")}
+            summary = (f"{counts['formatted']} formatted · {counts['unchanged']} unchanged · {counts['source_retained']} source retained"
+                       if rows else "Review the transcript before saving.")
+            self.ui(lambda: self.review_var.set(summary))
+            self._stage(2, "Ready to review" + (" · partial recording" if getattr(self, "_job_stopped", False) else ""))
 
             retained = sum(r["status"]=="source_retained" for r in engine.get("format_audit",[]))
-            done = (f"⚠️ Formatting finished: {retained} chunk(s) kept the unformatted source (see Fidelity Report)"
+            done = (f"⚠️ Formatting finished: {retained} chunk(s) kept the unformatted source (see the Review tab)"
                     if retained else "✅ All steps complete")
             if fidelity_results and n_ng:
-                done += f" (⚠️ {n_ng} flagged for review — see Fidelity Report)"
+                done += f" (⚠️ {n_ng} flagged for review — see the Review tab)"
             self.ui(lambda: self.fmt_progress.config(text=done))
             self.ui(lambda: self.status_var.set(
                 done + ". You can select the next file."))
-            self.ui(lambda: self.mode_var.set(gpu_info_str()))
+            gpu_status = gpu_info_str()
+            self.ui(lambda: self.mode_var.set(gpu_status))
         except Exception as e:
             err = str(e)
-            self.ui(lambda: self.fmt_progress.config(
-                text=f"❌ Post-processing error: {err}"))
+            message = f"Post-processing failed: {err}"
+            self.ui(lambda: self.fmt_progress.config(text=message))
+            self.ui(lambda: self.status_var.set(message))
+            self._stage(1, "Original transcript available · formatting failed")
         finally:
             self.ui(lambda: self._set_processing(False))
 
@@ -1084,39 +1099,24 @@ class WhisperMMVGUI:
     # Force-stop Whisper (main thread)
     # ─────────────────────────────────────────
     def kill_whisper(self):
+        if not self._busy or self.kill_flag.is_set():
+            return
         self.kill_flag.set()
-        self.status_var.set("Stop requested. MMV will format the text captured so far.")
-        self.whisper_progress.config(text="⏹ Stop requested (ends after transcribe completes)")
         self.kill_btn.config(state="disabled")
+        self.status_var.set("Stop requested. Segments shown so far will be formatted; the rest of the current 30-second window is discarded.")
+        self.whisper_progress.config(text="Stopping at the next transcript boundary…")
 
-        current = self.whisper_textbox.get("1.0", tk.END).strip()
-        # Strip the leading timestamps "[00:00.000 --> 00:05.000]" from the raw log
-        current = re.sub(r"\[[\d:.]+\s*-->\s*[\d:.]+\]\s*", "", current)
-        if current:
-            self.fmt_progress.config(text=f"{MMV_RELEASE} formatting…")
-            # Partial text has no segment info → speaker attribution is skipped
-            self.post_thread = threading.Thread(
-                target=self.run_postprocess, args=(current, None, None),
-                daemon=True)
-            self.post_thread.start()
-        else:
-            self.fmt_progress.config(
-                text="No text captured yet. Processing will start automatically after Whisper finishes.")
-
-    # ─────────────────────────────────────────
-    # Window close handling
-    # ─────────────────────────────────────────
     def on_closing(self):
-        running = (
-            (self.whisper_thread and self.whisper_thread.is_alive()) or
-            (self.post_thread    and self.post_thread.is_alive())
-        )
-        if running:
-            if not messagebox.askokcancel(
-                    "Confirm", "Processing is in progress. Quit anyway?\n"
-                             "(VRAM will be released automatically)"):
-                return
-        self._release_whisper_model()
+        if self._busy and not messagebox.askokcancel("Close MMV Voice?", "A recording is still being processed. Close without saving?"):
+            return
+        self.kill_flag.set()
+        self._closed = True
+        self.master.after_cancel(self._pump_id)
+        try:
+            self.progressbar.stop()
+        except tk.TclError:
+            pass
+        # Never free a model from the UI thread while its worker is using it.
         self.master.destroy()
 
 

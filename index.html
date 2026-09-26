@@ -6,35 +6,33 @@
 <title>MMV Voice</title>
 <meta name="description" content="Local-first speech-to-text: Whisper transcription and on-device Gemma punctuation with a deterministic preservation check. Nothing leaves your machine by default.">
 <style>
-  :root { --bg:#ffffff; --fg:#1d1d1f; --muted:#5c5c66; --line:#e4e4ea; --accent:#5b3fa0; --code:#f4f3f8; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#141418; --fg:#ececf1; --muted:#a2a2ad; --line:#2c2c34; --accent:#b9a3f0; --code:#1f1f26; } }
-  :root[data-theme="dark"] { --bg:#141418; --fg:#ececf1; --muted:#a2a2ad; --line:#2c2c34; --accent:#b9a3f0; --code:#1f1f26; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  main { max-width:760px; margin:0 auto; padding:40px 16px 64px; }
-  h1 { font-size:1.9rem; margin:0 0 4px; }
-  .lead { color:var(--muted); margin:0 0 28px; }
-  h2 { font-size:1.15rem; margin:32px 0 8px; }
-  p, li { margin:0 0 8px; }
-  ul { padding-left:20px; }
-  a { color:var(--accent); }
-  code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:.92em; }
-  table { border-collapse:collapse; width:100%; margin:8px 0 12px; font-size:.95rem; }
-  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
-  td.num, th.num { text-align:right; white-space:nowrap; }
-  .links a { display:inline-block; margin:4px 12px 4px 0; }
-  .note { border-left:3px solid var(--accent); padding:8px 12px; background:var(--code); border-radius:0 6px 6px 0; }
-  figure { margin:8px 0 20px; } .cap { color:var(--muted); font-size:.9rem; margin-top:6px; }
-  pre { background:var(--code); padding:12px; border-radius:6px; overflow-x:auto; font-size:.9rem; }
-  ol { padding-left:22px; }
-  footer { margin-top:40px; color:var(--muted); font-size:.9rem; }
+:root{--bg:#f7f9fa;--fg:#192f3b;--muted:#526a77;--line:#d9e3e8;--accent:#087f8c;--code:#edf3f5;--card:#fff}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}a{color:var(--accent);text-underline-offset:4px}a:hover{color:#055a64}a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #bd6900;outline-offset:5px}header{max-width:1180px;margin:auto;display:flex;justify-content:space-between;align-items:center;padding:24px 28px;gap:20px}.brand{display:flex;align-items:center;gap:10px;font-weight:750;text-decoration:none;color:var(--fg);white-space:nowrap}.mark{display:grid;place-items:center;width:32px;height:32px;background:var(--accent);color:white;border-radius:10px}nav{display:flex;gap:24px;align-items:center;font-size:14px}nav a{color:var(--muted);text-decoration:none}main{max-width:1180px;margin:auto;padding:18px 28px 60px}.hero{display:grid;grid-template-columns:1.15fr 1fr;gap:60px;align-items:center;padding:50px 0 64px}.eyebrow{font-size:12px;font-weight:750;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);margin:0 0 18px}h1{font-size:clamp(38px,4.6vw,62px);line-height:1.08;letter-spacing:-.055em;font-weight:700;margin:0 0 24px;max-width:640px}h1 em{font-style:normal;color:var(--accent)}.lead{font-size:18px;color:var(--muted);max-width:540px;line-height:1.75;margin:0 0 28px}.actions{display:flex;gap:12px;flex-wrap:wrap}.button,button{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;background:white;padding:11px 19px;font:600 14px/1.5 system-ui;text-decoration:none;color:var(--fg);cursor:pointer}.button.primary{background:var(--accent);border-color:var(--accent);color:white}.button:hover,button:hover{filter:brightness(.96)}.micro{font-size:13px;color:var(--muted);margin-top:18px}.preview{background:white;border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 50px #143f4f0d;padding:24px;transform:rotate(1deg)}.preview-top{display:flex;justify-content:space-between;gap:12px;font-size:11px;letter-spacing:.08em;color:var(--muted)}.badge{background:#e2f2ed;color:#236950;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:700}.wave{height:62px;display:flex;align-items:center;gap:5px;padding:8px 0}.wave i{display:block;flex:1;max-width:7px;background:#83bebf;border-radius:8px;height:var(--h)}.preview small{display:block;font-size:11px;letter-spacing:.1em;color:var(--muted);margin-bottom:10px}.sample{border-top:1px solid var(--line);padding-top:18px;margin-top:8px}.sample p{font-size:17px;line-height:1.8;margin:0}.sample mark{background:#dff3ed;color:#087763;padding:0 2px}.preview-bottom{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:18px;margin-top:22px}.intro-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;padding:26px 0;border-block:1px solid var(--line);margin-bottom:45px}.intro-strip strong{display:block;margin-bottom:4px}.intro-strip p{margin:0;color:var(--muted);font-size:14px}.links{display:flex;gap:12px 20px;flex-wrap:wrap;font-size:13px;margin:28px 0}.links a{max-width:100%}h2{font-size:25px;letter-spacing:-.035em;margin:48px 0 16px;font-weight:650}p,li{margin:0 0 12px}ul,ol{padding-left:22px}li{padding-left:5px}code{background:var(--code);padding:2px 5px;border-radius:4px;font-size:.88em}pre{padding:24px;background:#192f3b;color:#edf7f8;border-radius:12px;overflow:auto;font-size:14px;line-height:1.8}pre code{background:transparent;padding:0;color:inherit}.install-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.install-head h2{margin-bottom:12px}.copy-status{font-size:13px;color:var(--accent);min-height:1.5em}.note{background:#edf4f4;border:1px solid #cee1e1;border-radius:10px;padding:18px 20px;color:#375967}figure{margin:22px 0}.cap{font-size:13px;color:var(--muted);margin-top:10px}figure img{display:block;width:100%;height:auto;background:white;border:1px solid var(--line);border-radius:12px}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:20px 0;background:white}table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}th,td{text-align:left;vertical-align:top;padding:15px 18px;border-bottom:1px solid var(--line)}th{background:#edf3f5;font-weight:600}.num{text-align:right;white-space:nowrap}tr:last-child td{border-bottom:0}footer{border-top:1px solid var(--line);margin-top:48px;padding-top:24px;font-size:13px;color:var(--muted)}.skip{position:absolute;top:-60px;left:12px;background:white;padding:10px;z-index:2}.skip:focus{top:10px}.workspace-shot{margin:30px 0 40px}details{border-top:1px solid var(--line);margin-top:30px;padding-top:20px}summary{cursor:pointer;font-weight:650}.section-copy{max-width:820px}.install-head button{flex-shrink:0}
+@media(max-width:800px){.hero{grid-template-columns:1fr;gap:32px;padding:26px 0 40px}.preview{transform:none;max-width:560px}.intro-strip{gap:18px}.lead{max-width:none}header,main{padding-inline:22px}nav{gap:14px}.hero h1{max-width:590px}}
+@media(max-width:480px){header,main{padding-inline:18px}header{padding-top:18px;padding-bottom:16px}nav .secondary{display:none}.intro-strip{grid-template-columns:1fr;gap:18px}.preview{padding:20px}.actions{gap:10px}.actions .button{flex:1}.install-head{align-items:end}.install-head button{font-size:12px;padding:8px 11px}h2{font-size:23px}pre{padding:18px;font-size:12px}.links{font-size:12px}.brand{font-size:15px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
-<main>
-  <h1>MMV Voice</h1>
-  <p class="lead"><strong>Private, local-first transcription.</strong> Turn recordings into punctuated text on your own computer. Audio, transcript and model stay on your machine — no account, no API key, no upload, no telemetry. The local model may only add punctuation: if it changes a single word or number, its output is discarded and Whisper's text is kept. Linux desktop app, AGPL-3.0.</p>
-
+<a class="skip" href="#main">Skip to content</a>
+<header><a class="brand" href="#"><span class="mark" aria-hidden="true">m</span> MMV Voice</a><nav aria-label="Main navigation"><a class="secondary" href="#workflow">Workflow</a><a class="secondary" href="#evidence">Evidence</a><a class="button" href="#install">Get started <span aria-hidden="true">↗</span></a></nav></header>
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div><p class="eyebrow">Linux desktop · Local by default</p>
+    <h1 id="hero-title">A clearer transcript.<br><em>Still your words.</em></h1>
+    <p class="lead">Turn recordings into readable text on your own computer. Whisper listens. MMV adds punctuation. A preservation check keeps your original words intact.</p>
+    <div class="actions"><a class="button primary" href="#install">Start on your computer <span aria-hidden="true">&nbsp;↗</span></a><a class="button" href="https://github.com/mobius-style/mmv-voice">View source</a></div>
+    <p class="micro">No account or API key for local use. Free software, AGPL-3.0.</p></div>
+    <div class="preview" aria-label="Illustration of the punctuation workflow">
+      <div class="preview-top"><span>WORKFLOW ILLUSTRATION</span><span class="badge">ON YOUR COMPUTER</span></div>
+      <div class="wave" aria-hidden="true"><i style="--h:10px"></i><i style="--h:18px"></i><i style="--h:30px"></i><i style="--h:44px"></i><i style="--h:24px"></i><i style="--h:38px"></i><i style="--h:52px"></i><i style="--h:34px"></i><i style="--h:18px"></i><i style="--h:26px"></i><i style="--h:40px"></i><i style="--h:50px"></i><i style="--h:28px"></i><i style="--h:38px"></i><i style="--h:22px"></i><i style="--h:12px"></i><i style="--h:30px"></i><i style="--h:42px"></i><i style="--h:20px"></i><i style="--h:10px"></i><i style="--h:18px"></i><i style="--h:28px"></i><i style="--h:44px"></i><i style="--h:30px"></i></div>
+      <div class="sample"><small>ORIGINAL WORDS</small><p>We met today the budget is 320 dollars</p></div>
+      <div class="sample"><small>PUNCTUATION, NOT A REWRITE</small><p>We met today<mark>,</mark> the budget is 320 dollars<mark>.</mark></p></div>
+      <div class="preview-bottom">A changed word or number? The original is retained.</div>
+    </div>
+  </section>
+  <div class="intro-strip"><div><strong>Keep it on your machine.</strong><p>Local speech and language models. Cloud processing is a separate, explicit choice.</p></div><div><strong>See what changed.</strong><p>Original, candidate and preservation result stay available for review.</p></div><div><strong>Save what you need.</strong><p>Copy the transcript, save a text file or keep the full review digest.</p></div></div>
+  <section id="workflow"><h2>One recording. One clear workspace.</h2><p class="section-copy">Open a recording, follow its progress, then review the original beside the result. Notes and extra checks stay out of the way until you need them.</p><figure class="workspace-shot"><img src="docs/desktop-workspace.png" alt="MMV Voice desktop workspace: recording controls on the left, progress at the top, original and transcript side by side, and text export below" loading="lazy" width="1180" height="780"><figcaption class="cap">Desktop interface preview. This page is a guide; audio processing runs in the installed desktop app.</figcaption></figure></section>
   <p class="links">
     <a href="https://github.com/mobius-style/mmv-voice">Source on GitHub</a>
     <a href="README.md">README</a>
@@ -58,11 +56,13 @@
     <li><strong>Cloud is opt-in, twice</strong> — off by default, needs your own key, confirms before sending.</li>
   </ul>
 
-  <h2>Quick start</h2>
-<pre><code>git clone https://github.com/mobius-style/mmv-voice && cd mmv-voice
+  <div class="install-head" id="install"><h2>Ready when you are.</h2><button type="button" id="copy-install">Copy commands</button></div>
+  <p>Check your setup first. The installer asks before downloading anything.</p>
+<pre id="install-commands"><code>git clone https://github.com/mobius-style/mmv-voice && cd mmv-voice
 bash install.sh --check   # shows what is missing; changes nothing
 bash install.sh           # installs locally, asks before every download
 bash launch.sh            # opens the app</code></pre>
+  <p class="copy-status" id="copy-status" role="status" aria-live="polite"></p>
   <p>Linux desktop, Python 3.10+, <code>ffmpeg</code>, <code>python3-tk</code>, and <a href="https://ollama.com/download">Ollama</a> running. An NVIDIA GPU with 8–16 GB is recommended. The installer never uses <code>sudo</code> and never starts or stops Ollama.</p>
 
   <h2>Using it</h2>
@@ -70,7 +70,7 @@ bash launch.sh            # opens the app</code></pre>
     <li>Open an audio file — transcription starts at once, language auto-detected.</li>
     <li>Formatting follows: chunks of up to 1,000 characters go to the local model for punctuation and paragraph breaks.</li>
     <li>Read the result; any chunk that failed the check is shown exactly as Whisper wrote it.</li>
-    <li>The "Verification report" tab shows source, candidate and reason for every chunk.</li>
+    <li>The "Review" tab shows source, candidate and reason for every chunk.</li>
     <li>Save the text (optional: minutes or a digest file).</li>
   </ol>
 
@@ -80,7 +80,7 @@ bash launch.sh            # opens the app</code></pre>
     <figcaption class="cap">Only punctuation and whitespace may differ from Whisper's text; anything else sends the chunk back to Whisper's version. Enforced in code and tests, not a formal proof; it cannot fix words Whisper misheard.</figcaption>
   </figure>
 
-  <h2>English first</h2>
+  <h2 id="evidence">Measured, with limits.</h2>
   <p>Docs, UI, prompts and tests are written for English. v0.2.4 removes the one sentence that made the model add stray semicolons. On 12 <em>new</em> English FLEURS clips, punctuation now roughly matches Whisper's own (type-aware F1 <strong>0.854</strong> vs 0.821, intervals overlap) instead of clearly worse (v0.2: 0.659); v0.2.4 leaves most clips' punctuation alone (7 of 12) and adds punctuation on 4; 11 of 12 clips were accepted, and <strong>no word or number was ever changed</strong> — the one clip whose candidate changed a word fell back to Whisper's text.</p>
   <p class="note">Small read-speech panels; the 95% intervals overlap; FLEURS training overlap unresolved. Details: <a href="eval/mmv_voice_v024_20260926.md">v0.2.4 evidence</a>.</p>
 
@@ -88,7 +88,7 @@ bash launch.sh            # opens the app</code></pre>
   <p>On a real 17.5-minute, four-person meeting (AMI ES2004a), transcription took 32 s including model load (27 s transcribing) on one RTX 5070 Ti (WER 27% on overlapping, informal speech). Formatting stepped aside on 11 of 12 chunks, returning Whisper's text unchanged — your words stay safe, but on meetings you mostly get Whisper's own punctuation. Observed causes: the MMV governance layer prepended a boilerplate sentence to 6 conversational chunks; in the other 5 the model changed capitalisation, mostly where the 1,000-character split cut a sentence. A fix is being measured for v0.3.</p>
 
   <h2>Measured results</h2>
-  <table>
+  <div class="table-wrap" tabindex="0" role="region" aria-label="Measured results, scroll horizontally on small screens"><table>
     <thead><tr><th>Panel</th><th class="num">Candidate accepted</th><th class="num">Source retained</th><th class="num">Punctuation-position F1</th></tr></thead>
     <tbody>
       <tr><td><strong>English, 12 new clips × 3 (2026-09-26), v0.2.4</strong></td><td class="num">11/12 clips</td><td class="num">1/12</td><td class="num">0.846 → 0.878</td></tr>
@@ -99,13 +99,26 @@ bash launch.sh            # opens the app</code></pre>
       <tr><td>Japanese, same clips, previous v1 prompt</td><td class="num">83.3% (30/36)</td><td class="num">6/36</td><td class="num">0.857</td></tr>
       <tr><td>English, same 8 clips, regression (pre-release build)</td><td class="num">8/8</td><td class="num">0/8</td><td class="num">—</td></tr>
     </tbody>
-  </table>
+  </table></div>
   <p class="note">Acceptance means the candidate passed the preservation check, not that its punctuation is right. The position-accuracy metric is identical for both prompts (paired delta +0.001, 95% CI [−0.089, +0.088]). Small panels, read speech, no population guarantee. Details and failure cases are in the status report.</p>
 
   <h2>What it is not</h2>
-  <p>It does not correct transcription errors — a candidate that fixes a misheard word is rejected because the words changed. Punctuation can still alter meaning; the check does not prove semantic fidelity. Languages other than Japanese and English are unevaluated.</p>
+  <p>It does not correct transcription errors — a candidate that fixes a misheard word is rejected because the words changed. Punctuation can still alter meaning; the check does not prove semantic fidelity. Mandarin has a small reference measurement; other languages are unevaluated.</p>
 
-  <footer>Copyright © 2025-2026 MOBIUS LLC · Taiko Toeda · AGPL-3.0 · This page is a static mirror of the GitHub repository; the source tree here is byte-identical to the tagged release.</footer>
+  <footer>Copyright © 2025-2026 MOBIUS LLC · Taiko Toeda · AGPL-3.0 · This page is a static mirror of the GitHub repository; see the repository releases for the published source version.</footer>
 </main>
+<script>
+const copyButton = document.getElementById('copy-install');
+copyButton.addEventListener('click', async () => {
+  const status = document.getElementById('copy-status');
+  try {
+    await navigator.clipboard.writeText(document.getElementById('install-commands').innerText);
+    status.textContent = 'Commands copied. Paste them into your terminal when you are ready.';
+    copyButton.textContent = 'Copied';
+  } catch {
+    status.textContent = 'Clipboard access is unavailable. Select and copy the commands above.';
+  }
+});
+</script>
 </body>
 </html>

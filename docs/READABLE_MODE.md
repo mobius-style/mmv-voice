@@ -39,6 +39,39 @@ change: legitimate rewriting can trigger them and a wrong person's name can
 escape them. No warning never means verified. All non-empty readable outputs
 require human review; the status line, the Review tab and the digest say so.
 
+## Bounded-edit guard (v0.2.10)
+
+After the model answers, a deterministic check compares the draft with the
+source chunk and keeps the source (status `source_retained`, reason
+`readable_guard: …`, the draft and a diff still shown in Review) when any of
+these holds:
+
+- the multiset of numerals differs (`numerals_changed`) — an explicit
+  self-correction that keeps both values passes, one that drops the first
+  value does not; kanji numerals and number words are not recognised;
+- the number of negation expressions differs (`negation_count_changed`) — a
+  dropped "not" or an added ません is one token and would otherwise pass;
+- more than min(15, max(1, 3 per 100 source tokens)) content tokens are
+  missing from the draft, after removing an unambiguous filler list (um, uh,
+  okay, well, えー, あの, 嗯 … and the phrases "you know" / "I mean" / "sort
+  of" / "kind of"); words that can carry content (right, like, so, その, あの,
+  这个) are not treated as fillers (`omission_over_limit`);
+- the draft contains content the source does not: English words outside a
+  small function-word list, Japanese kanji or kana runs that cannot be built
+  from particles / auxiliaries / formal nouns (so すべて counts, ています does
+  not), Mandarin characters outside a small function-character list
+  (`content_added`). Japanese negation is counted on 〜ない / 〜なかった /
+  ません / ではなく; Mandarin on 不 没 无 非 未; English on not / never / no /
+  without and contracted forms.
+
+This bounds what a readable draft can do; it does not make it correct. It
+cannot see a meaning change made with the same tokens, and it will retain
+some legitimate rewrites (a singular/plural change, a paraphrase that
+introduces a new kanji). The thresholds were set on the 2026-09-26 held-out
+outputs (read speech never lost more than one token per chunk; meeting drafts
+that lost 4–18 tokens per 100 were the cases to catch) and are to be
+confirmed on new recordings.
+
 ## Markers
 
 The prompts (English, Japanese, Mandarin; `profiles/readable_prompts.json`)

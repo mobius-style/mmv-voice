@@ -28,6 +28,125 @@ SIGNALS = {
 }
 RULES = ('numeric_expression_changed', *SIGNALS)
 
+# ---- Readable postcondition (v0.2.10): a bounded-edit contract enforced in code ----
+# A draft may re-punctuate, fix grammar, drop fillers/repeats and resolve explicit self-corrections.
+# It may NOT (a) change the multiset of numerals, (b) drop more than OMIT_MAX_PER100 content tokens per
+# 100 source tokens (or more than OMIT_MAX_ABS in short chunks), (c) introduce content the source does not
+# contain: English content words outside a small function-word list, Japanese kanji, Mandarin characters
+# outside a small function-character list. Violations retain the source chunk with a visible reason.
+# Thresholds were set on the 2026-09-26 held-out outputs (read speech: <=1 omitted token per chunk;
+# meeting drafts that lost 4-18 tokens per 100 were the failures to catch) and are validated on new data.
+OMIT_MAX_PER100 = 3.0
+OMIT_MAX_ABS = 1
+OMIT_MAX_CAP = 15          # never more than this many content tokens, however long the chunk
+# Fillers are removed from the SOURCE before counting omissions. Only unambiguous ones: words that
+# can carry content (right, like, so, mean, know; その; 这个/就是/然后) are deliberately NOT here,
+# so dropping them counts as an omission. English filler phrases are removed as phrases.
+FILLERS = {
+    'en': {'um', 'uh', 'er', 'ah', 'hmm', 'mm', 'mhm', 'okay', 'ok', 'yeah', 'yep', 'well', 'actually', 'basically'},
+    'en_phrases': (('you', 'know'), ('i', 'mean'), ('sort', 'of'), ('kind', 'of')),
+    'ja': ('えーと', 'えっと', 'ええと', 'えー', 'あのー', 'なんていうか', 'なんか', 'うーん', 'えっ', 'まあ'),   # not あの / ええ (content)
+    'zh': ('那个', '嗯', '呃', '啊', '哦'),
+}
+# Guard-side negation counts (broader than the marker lexicon on purpose: a count change here only ever
+# retains the source, so adjective endings such as 少ない or idioms such as 不错 cost at most a retention).
+GUARD_NEGATION = {
+    'en': re.compile(r"\b(?:not|never|no|nothing|nobody|none|cannot|can't|don't|doesn't|didn't|isn't|aren't|wasn't|weren't|won't|haven't|hasn't|without)\b", re.I),
+    'ja': re.compile(r'ません|なかった|ない|ではなく|じゃなく|未定'),
+    'zh': re.compile(r'[不没无非未]'),
+}
+# Japanese kana-only content: an added kana run that cannot be built from grammatical fragments is content
+# (e.g. すべて, ずっと, もっと). Fragments: particles, auxiliaries, common connectives and demonstrative pronouns.
+KANA_FUNCTION = ('ます', 'ました', 'ません', 'ませんでした', 'です', 'でした', 'でしょう', 'だろう', 'ている', 'ています', 'ていた', 'てある', 'ておく',
+                 'ください', 'こと', 'もの', 'ため', 'ように', 'ような', 'など', 'また', 'そして', 'しかし', 'ただし', 'ので', 'から', 'まで', 'より',
+                 'について', 'という', 'といった', 'これ', 'それ', 'あれ', 'この', 'その', 'ここ', 'そこ', 'それで', 'それから', 'つまり', 'なお',
+                 'について', 'による', 'によって', 'として', 'とか', 'たり', 'ながら', 'けれど', 'けど', 'のに', 'なら', 'たら', 'れば', 'ても', 'でも',
+                 'ない', 'なかった', 'ず', 'ぬ', 'う', 'よう', 'そう', 'らしい', 'みたい', 'はず', 'わけ', 'べき', 'かも', 'しれ', 'ませ', 'ん',
+                 'うち', 'なか', 'ほう', 'ところ', 'とき', 'あと', 'まえ', 'ほか', 'おり', 'さい', 'ごと', 'たび', 'あいだ', 'とおり', 'まま', 'ぐらい', 'くらい', 'ほど', 'だけ', 'しか', 'ばかり', 'すら', 'さえ')
+KANA_PARTICLES = set('のはがをにでとへもやかなねよさしてたつだまいうれらせこそどばずきくけげぐっゃゅょー')
+_KANA_RUN = re.compile(r'[\u3040-\u30ff\u30fc]{2,}')
+
+
+def _kana_run_is_functional(run):
+    i = 0
+    while i < len(run):
+        step = 0
+        for frag in sorted(KANA_FUNCTION, key=len, reverse=True):
+            if run.startswith(frag, i): step = len(frag); break
+        if not step and run[i] in KANA_PARTICLES: step = 1
+        if not step: return False
+        i += step
+    return True
+EN_FUNCTION = {'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'am', 'to', 'of', 'and', 'or', 'but', 'that',
+               'which', 'who', 'it', "it's", 'its', 'we', 'i', 'you', 'they', 'he', 'she', 'in', 'on', 'at', 'for', 'with', 'this',
+               'these', 'those', 'there', 'here', 'has', 'have', 'had', 'do', 'does', 'did', 'so', 'then', 'than', 'as', 'by',
+               'from', 'into', 'about', 'if', 'when', 'while', 'because', 'also', 'very', 'will', 'would', 'can', 'could', 'should'}
+ZH_FUNCTION = set('的了是在和与及而并也都就这那个们把被让给对为于所以之其一着过吗呢吧')
+_EN_WORD = re.compile(r"[a-z0-9]+(?:'[a-z]+)?")
+_KANJI = re.compile(r'[\u4e00-\u9fff]')
+_KANA = re.compile(r'[\u3040-\u30ff]')
+
+
+def _lang_key(lang):
+    lang = (lang or 'ja').lower()
+    return 'ja' if lang.startswith('ja') else 'zh' if lang.startswith(('zh', 'cmn')) else 'en'
+
+
+def _content_tokens(text, key):
+    import unicodedata
+    text = text.replace('（※要確認）', '')
+    if key == 'en':
+        return _EN_WORD.findall(text.lower())
+    # every punctuation / symbol / separator character is ignored, whatever the script
+    return [c for c in text if not c.isspace() and unicodedata.category(c)[0] not in 'PZS']
+
+
+def _without_fillers(tokens, key):
+    if key == 'en':
+        out, i = [], 0
+        while i < len(tokens):
+            if any(tuple(tokens[i:i + len(p)]) == p for p in FILLERS['en_phrases']):
+                i += 2; continue
+            if tokens[i] not in FILLERS['en']: out.append(tokens[i])
+            i += 1
+        return out
+    s = ''.join(tokens)
+    for f in FILLERS[key]:
+        s = s.replace(f, '')
+    return list(s)
+
+
+def readable_postcondition(source, candidate, lang='ja'):
+    """Return a list of violated rules ([] = the draft stays within the bounded-edit contract)."""
+    from collections import Counter
+    key = _lang_key(lang)
+    violations = []
+    if sorted(numbers(source)) != sorted(numbers(candidate.replace('（※要確認）', ''))):
+        violations.append('numerals_changed')
+    src = _content_tokens(source, key); cand = Counter(_content_tokens(candidate, key))
+    omitted = sum((Counter(_without_fillers(src, key)) - cand).values())
+    if omitted > min(OMIT_MAX_CAP, max(OMIT_MAX_ABS, OMIT_MAX_PER100 * len(src) / 100.0)):
+        violations.append(f'omission_over_limit:{omitted}/{len(src)}')
+    # Polarity is content: the number of negation expressions must not change (a dropped "not" is one token
+    # and would otherwise slip under the omission allowance; an added ません / 行かない is kana-only).
+    neg = GUARD_NEGATION[key]
+    if len(neg.findall(source.lower())) != len(neg.findall(candidate.replace('（※要確認）', '').lower())):
+        violations.append('negation_count_changed')
+    added = Counter(_content_tokens(candidate, key)) - Counter(src)
+    if key == 'en':
+        new = [t for t in added.elements() if t not in EN_FUNCTION and t not in FILLERS['en'] and not t.isdigit()]
+    elif key == 'ja':
+        new = [c for c in added.elements() if _KANJI.match(c)]
+        plain_src = source.replace('（※要確認）', '')
+        for run in _KANA_RUN.findall(candidate.replace('（※要確認）', '')):
+            if run not in plain_src and not _kana_run_is_functional(run):
+                new.append(run)
+    else:
+        new = [c for c in added.elements() if c not in ZH_FUNCTION and not c.isdigit()]
+    if new:
+        violations.append('content_added:' + ' '.join(sorted(set(new))[:6]))
+    return violations
+
 
 def diagnostics(source, candidate):
     flags = []
@@ -134,6 +253,7 @@ class ReadableFormatter(MMVFormatter):
                 row['reason'] = 'unexpected_wrapper_preamble'
             else:
                 flags = diagnostics(source, candidate)
+                violations = readable_postcondition(source, candidate, lang)
                 model_marked = candidate.count('（※要確認）') > source.count('（※要確認）')
                 # A rule cannot locate the precise semantic span: mark this chunk.
                 if flags:
@@ -141,13 +261,19 @@ class ReadableFormatter(MMVFormatter):
                 row['annotation_scope'] = '+'.join(s for s, on in (('chunk', bool(flags)), ('model_marked_spans', model_marked)) if on) or 'none'
                 row['review_marker_count'] = candidate.count('（※要確認）') - source.count('（※要確認）')
                 row['model_candidate'] = row['candidate']
-                row['diff'] = '\n'.join(difflib.unified_diff(source.splitlines(), candidate.splitlines(),
+                row['diff'] = '\n'.join(difflib.unified_diff(source.splitlines(), row['candidate'].splitlines(),
                                                              fromfile='source', tofile='draft', lineterm=''))
-                lead = source[:len(source)-len(source.lstrip())]
-                tail = source[len(source.rstrip()):]
-                row.update(text=lead+candidate+tail, accepted=True,
-                           status='unchanged' if candidate == source.strip() else 'formatted',
-                           reason='draft_for_review', review_flags=flags)
+                row['guard_violations'] = violations
+                if violations:
+                    # Outside the bounded-edit contract: keep the source chunk, show why and what the model wrote.
+                    row.update(text=source, accepted=False, status='source_retained',
+                               reason='readable_guard: ' + '; '.join(violations), review_flags=flags)
+                else:
+                    lead = source[:len(source)-len(source.lstrip())]
+                    tail = source[len(source.rstrip()):]
+                    row.update(text=lead+candidate+tail, accepted=True,
+                               status='unchanged' if candidate == source.strip() else 'formatted',
+                               reason='draft_for_review', review_flags=flags)
         except Exception as exc:
             row['reason'] = f'backend_error: {type(exc).__name__}: {exc}'
         row['seconds'] = time.monotonic()-start

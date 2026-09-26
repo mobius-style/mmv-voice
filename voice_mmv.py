@@ -44,6 +44,8 @@ def audit_report(rows):
         if row.get('mode') == 'readable':
             lines.append(f"Profile: {row.get('profile_path')} | diagnostic rules: {row.get('diagnostic_rule_count')} | human_verified: false")
             lines.append('Review signals: ' + (', '.join(row.get('review_flags', [])) or 'no heuristic signal; not a semantic clearance'))
+            if row.get('guard_violations'):
+                lines.append('Bounded-edit guard: ' + '; '.join(row['guard_violations']) + ' -> source kept; the model draft is shown below for reference only')
         lines.append('[source]\n'+row['source'])
         lines.append('[model candidate]\n'+row['candidate'])
         if row.get('diff'):

@@ -37,6 +37,11 @@ class ReadableTests(unittest.TestCase):
         for s,c,flag in [('15万円です','50万円です','numeric_expression_changed'),('採用しません','採用します','negation_changed'),('We might deliver','We will deliver','uncertainty_changed'),('没有批准','已经批准','negation_changed')]:
             self.assertIn(flag,vr.diagnostics(s,c));self.assertNotIn(flag,vr.diagnostics(s,s))
         self.assertEqual(vr.diagnostics('予算は15万円です','予算は15万円です。'),[])
+    def test_guard_is_stricter_than_marker_rules(self):
+        # The marker-rule negative controls below are edits that must not be FLAGGED; the bounded-edit guard
+        # may still RETAIN several of them (paraphrase, dropped filler not in the list). Documented, not a defect.
+        retained=[(s,c) for s,c in [('人数が少ないです','人数は少数です'),('不好意思，我们下周不能来。','我们下周不能来。')] if vr.readable_postcondition(s,c,'ja' if s[0]>'ぁ' and s[0]<'ヿ' or s[0]=='人' else 'zh')]
+        self.assertEqual(len(retained),2)
     def test_diagnostics_negative_controls_ordinary_edits(self):
         # Ordinary readable edits that the prompt itself requests must NOT trip the warning rules (v0.2.8 review S1).
         for s,c in [('人数が少ないです','人数は少数です'),('それはできないです','それはできません'),('もったいないですね','惜しいですね'),
@@ -46,6 +51,35 @@ class ReadableTests(unittest.TestCase):
         # …while real polarity/uncertainty removals still flag.
         self.assertIn('negation_changed',vr.diagnostics('我们下周不能来。','我们下周能来。'))
         self.assertIn('uncertainty_changed',vr.diagnostics('たぶん来週です','来週です'))
+    def test_bounded_edit_guard_known_good_and_bad(self):
+        ok=[('en','um so the budget is 320 dollars and it is due friday','The budget is 320 dollars and it is due Friday.'),
+            ('ja','えー 申請は終わりました あの 結果を待ちます','申請は終わりました。あの、結果を待ちます。'),   # えー is a filler; あの is kept (demonstrative)
+            ('zh','嗯 下周大概能处理','下周大概能处理。'),
+            ('en','we will need about 50 units','We will need about 50 units.')]
+        for lang,s,c in ok: self.assertEqual(vr.readable_postcondition(s,c,lang),[],(s,c))
+        ok+= [('en',"you know what i mean the budget is 320 dollars",'The budget is 320 dollars.'),   # filler phrases
+              ('zh','他说这很重要','他说“这很重要”。'),                                                     # added quotes are not content
+              ('ja','東京で会います','東京で会います。')]
+        for lang,s,c in ok: self.assertEqual(vr.readable_postcondition(s,c,lang),[],(s,c))
+        ok+= [('ja','私はそこに行きます','私はそこに行きます。'),('ja','資料を確認しています','資料を確認しています。')]
+        for lang,s,c in ok: self.assertEqual(vr.readable_postcondition(s,c,lang),[],(s,c))
+        bad=[('ja','そこに行く','そこに行かない。','negation_count_changed'),                                   # plain verb negation (review 2026-09-26 #1)
+             ('ja','一つ選んでください','すべて選んでください。','content_added'),                                # kana-only quantifier flip (#2)
+             ('ja','あの人が犯人です','人が犯人です。','omission_over_limit'),                                   # あの is a demonstrative, not a filler (#3)
+             ('en','we will not ship on friday','We will ship on Friday.','negation_count_changed'),           # dropped negation (1 token)
+             ('en','we will ship on friday','We will not ship on Friday.','content_added'),
+             ('ja','来週に出荷します','来週には出荷しません。','negation_count_changed'),                      # kana-only polarity flip
+             ('en',"that's right we mean the second one",'We the second one.','omission_over_limit'),          # 'right'/'mean' are content
+             ('en','we will need about fifty units','We will need about 50 units.','numerals_changed'),
+             ('en','the budget is 320 dollars and it is due friday','The budget is 320 dollars.','omission_over_limit'),
+             ('en','en ik vind het van markt to tell you','I think from a sell the market to tell you.','content_added'),
+             ('ja','予算は15万円です','予算は50万円です。','numerals_changed'),
+             ('zh','黄庚承会来','黄循财会来。','content_added')]
+        for lang,s,c,rule in bad: self.assertTrue(any(v.startswith(rule) for v in vr.readable_postcondition(s,c,lang)),(s,c,rule))
+    def test_guard_violation_keeps_source_and_shows_draft(self):
+        Handler.content='黄循财会来。';text,rows=self.client.format('黄庚承会来','zh')
+        self.assertEqual(text,'黄庚承会来');self.assertEqual(rows[0]['status'],'source_retained');self.assertIn('readable_guard',rows[0]['reason'])
+        self.assertEqual(rows[0]['candidate'],'黄循财会来。');self.assertTrue(rows[0]['needs_review']);self.assertIn('[changes]',audit_report(rows));self.assertIn('Bounded-edit guard',audit_report(rows))
     def test_26b_tag_absent_is_visible_error_never_12b_fallback(self):
         client=vr.ReadableFormatter(self.gui.call_adapter,self.host,model='gemma4:26b-a4b-it-qat')
         self.assertEqual(client.profile['model_id'],'gemma4:26b-a4b-it-qat')
@@ -59,9 +93,15 @@ class ReadableTests(unittest.TestCase):
             body=open(path,encoding='utf-8').read()
         self.assertIn('format_mode: readable',body);self.assertIn('human_verified: false',body)
     def test_flags_do_not_silently_revert_or_certify(self):
+        # A dropped uncertainty word trips a review rule but not the guard: delivered with a marker, never silently.
+        Handler.content='We will deliver on Friday.';out,rows=self.client.format('we might deliver on friday','en')
+        self.assertTrue(out.startswith(Handler.content));self.assertIn('（※要確認）',out);self.assertIn('uncertainty_changed',rows[0]['review_flags']);self.assertTrue(rows[0]['needs_review'])
+        report=audit_report(rows);self.assertIn('NOT verified',report);self.assertIn('might',report);self.assertIn('[changes]',report);self.assertIn('diagnostic rules: 3',report)
+        # Dropping a whole uncertainty word in a short Japanese chunk is content loss: the guard keeps the source.
+        Handler.content='来週です。';out2,rows2=self.client.format('たぶん来週です','ja');self.assertEqual(out2,'たぶん来週です');self.assertIn('omission_over_limit',rows2[0]['reason'])
+        # A numeral change is a guard violation: source kept, draft visible with both numbers in the report.
         Handler.content='予算は50万円です。';out,rows=self.client.format('予算は15万円です','ja')
-        self.assertTrue(out.startswith(Handler.content));self.assertIn('（※要確認）',out);self.assertIn('numeric_expression_changed',rows[0]['review_flags']);self.assertTrue(rows[0]['needs_review'])
-        report=audit_report(rows);self.assertIn('NOT verified',report);self.assertIn('15万円',report);self.assertIn('50万円',report);self.assertIn('[changes]',report);self.assertIn('diagnostic rules: 3',report)
+        self.assertEqual(out,'予算は15万円です');self.assertEqual(rows[0]['status'],'source_retained');report=audit_report(rows);self.assertIn('15万円',report);self.assertIn('50万円',report);self.assertIn('Bounded-edit guard',report)
     def test_empty_error_truncation_and_preamble_fallback(self):
         for text,error,tokens,reason in [('',None,0,'empty_output'),('changed','offline',3,'backend_error'),('long',None,1024,'possible_output_truncation'),('Correction of the premise: x',None,8,'unexpected_wrapper_preamble')]:
             client=vr.ReadableFormatter(lambda *a:SimpleNamespace(text=text,error=error,tokens_in=3,tokens_out=tokens),self.host)

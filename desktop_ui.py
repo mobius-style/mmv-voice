@@ -159,11 +159,16 @@ class WorkspaceUI:
         self.readable_check = ttk.Checkbutton(frame, text='Readable draft instead of punctuation only', variable=self.opt_readable)
         self.readable_check.pack(anchor='w')
         readable_note = ('Rewrites the transcript for readability and may change wording; the model is asked to keep '
-                         'unclear spans verbatim and mark them （※要確認）. The word-and-number guarantee does NOT apply; '
+                         'unclear spans verbatim and mark them （※要確認）. A code-level guard keeps the original chunk if numerals or negations '
+                         'change, content is added (words; Japanese kanji or kana words), or more than a few content words disappear. '
+                         'The word-and-number guarantee does NOT apply; '
                          'the original text and a diff stay in the Review tab. Every result needs human review.')
         if self._readable_unavailable:
             self.readable_check.state(['disabled'])
             readable_note = 'Readable draft mode is unavailable: ' + self._readable_unavailable
+        elif self.engine_var.get() == 'L':
+            self.readable_check.state(['disabled'])
+            readable_note = 'Readable draft applies to local processing only; the cloud engine is selected.'
         tk.Label(frame, text=readable_note, bg='white', fg=MUTED, justify='left', wraplength=390).pack(anchor='w', pady=(4, 16))
         ttk.Button(frame, text='Done', style='Accent.TButton', command=dialog.destroy).pack(anchor='e')
         dialog.grab_set()

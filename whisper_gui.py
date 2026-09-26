@@ -1096,7 +1096,9 @@ class WhisperMMVGUI(WorkspaceUI):
             summary = (f"{counts['formatted']} formatted · {counts['unchanged']} unchanged · {counts['source_retained']} source retained"
                        if rows else "Review the transcript before saving.")
             if engine.get("format_mode") == "readable":
-                summary = f"Draft · {sum(bool(r.get('review_flags')) for r in rows)} chunks flagged · review required"
+                guarded = sum(1 for r in rows if r.get('guard_violations'))
+                summary = (f"Draft · {sum(bool(r.get('review_flags')) for r in rows)} chunks flagged"
+                           + (f" · {guarded} kept the source (edit guard)" if guarded else "") + " · review required")
             self.ui(lambda: self.review_var.set(summary))
             self._stage(2, "Ready to review" + (" · partial recording" if getattr(self, "_job_stopped", False) else ""))
 

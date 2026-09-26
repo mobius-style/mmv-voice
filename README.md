@@ -159,7 +159,16 @@ formatted every chunk but removed 3.5 (12B) to 9.3 (26B) content tokens per
 100 — mostly function words and false starts — and 26B invented a numeral
 once (the numeric rule flagged that chunk). Punctuation position F1 was
 equal or slightly higher than the default. These numbers do not change the
-contract: readable output is a draft for human review.
+contract: readable output is a draft for human review. **v0.2.10 adds a
+code-level bound** on top of it: a draft that changes numerals, drops more
+than a few content words, or adds content absent from the source is
+discarded and the source chunk kept (with the draft shown in the Review
+tab); a changed count of negation words counts as content. Applied to the
+held-out outputs above, that keeps the source for 14/18 (12B) and
+15/18 (26B) meeting chunks — content loss 9.3 → 0.3 per 100 (26B),
+invented tokens 0 — and touches read speech almost never (3/36 English
+chunks, 12B). Details: [held-out report](eval/mmv_readable_heldout_20260926.md),
+[mode contract](docs/READABLE_MODE.md).
 
 A sibling of [mobius-style/mmv](https://github.com/mobius-style/mmv): every
 LLM call goes through the MMV harness, never a raw API. v0.2 replaced the
@@ -480,6 +489,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.10` | 2026-09-26 | readable draft: bounded-edit guard (numerals and negation count unchanged, content loss ≤ min(15, max(1, 3/100)), no added content incl. Japanese kana words) keeps the source chunk on violation; readable checkbox disabled while the cloud engine is selected |
 | `v0.2.9` | 2026-09-26 | documentation: held-out comparison of the shipped engines (default vs readable 12B/26B) added to `eval/` |
 | `v0.2.8` | 2026-09-26 | opt-in readable draft mode (`voice_readable.py`: rewrite for readability, `（※要確認）` markers for unclear spans, sentence-end chunking, 12B or digest-pinned 26B); default engine and its guarantee unchanged |
 | `v0.2.7` | 2026-09-26 | landing page: dark mode restored (follows the OS `prefers-color-scheme`; light unchanged) |

@@ -120,6 +120,21 @@ Over-marking — the marked span matches the reference: `78（※要確認）あ
 
 Unmarked — the remaining error regions (see the table rows "left unmarked") are mostly particles, one-character substitutions and punctuation-adjacent differences that the model did not treat as unclear.
 
+## Post hoc: the v0.2.10 bounded-edit guard on these outputs
+
+v0.2.10 adds a deterministic guard to the readable engine: a chunk is kept as the source when the draft changes the multiset of numerals, changes the number of negation expressions, drops more than min(15, max(1, 3 per 100)) content tokens (an unambiguous filler list and the phrases "you know" / "I mean" / "sort of" / "kind of" excluded), or adds content the source does not contain (English content words, Japanese kanji or non-grammatical kana runs, Mandarin non-function characters). Because all runs used temperature 0, applying the guard to the saved candidates reproduces what the live guard would have delivered.
+
+| Panel | Condition | Chunks kept as source by the guard | Omitted tokens / 100 before → after | Invented tokens / 100 before → after | Error rate before → after |
+|---|---|---:|---:|---:|---:|
+| AMI meeting | R12 | 14/18 (omission 12, added content 8, negation count 3) | 3.52 → 0.00 | 0.00 → 0.00 | 43.74% → 43.32% |
+| AMI meeting | R26 | 15/18 (omission 12, numerals 3, added content 11, negation count 2) | 9.28 → 0.28 | 0.37 → 0.00 | 43.35% → 43.06% |
+| English FLEURS | R12 | 3/36 (added content: a singular/plural change) | 0.29 → 0.00 | 0.00 → 0.00 | 3.16% → 3.44% |
+| English FLEURS | R26 | 0/36 | 0.00 → 0.00 | 0.00 → 0.00 | unchanged |
+| Japanese FLEURS | R12 / R26 | 0/36 / 0/36 | unchanged | 0.00 | unchanged |
+| Mandarin FLEURS | R12 / R26 | 0/36 / 0/36 | unchanged | 0.00 | unchanged |
+
+Reading: on read speech the guard is almost never triggered (the one English case is a conservative retention that costs +0.3 pt WER); on the meeting it returns most readable chunks to the source, which removes the content loss and the invented numeral at the price of formatting only 4/18 (12B) and 3/18 (26B) chunks. The thresholds were set on these same outputs and therefore need confirmation on new recordings; the guard is a code-level bound, not a semantic check.
+
 ## How to read this
 
 - A negative "change vs raw Whisper" means the delivered text is closer to what was said than Whisper's own transcript; the default engine cannot move this number except through punctuation-insensitive normalisation (it should be ~0).

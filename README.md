@@ -144,6 +144,23 @@ is on hold; the mode is offered for review-assisted use. Full report:
 [eval/mmv_readable_v2_20260926.md](eval/mmv_readable_v2_20260926.md); mode
 contract: [docs/READABLE_MODE.md](docs/READABLE_MODE.md).
 
+**Held-out comparison of the shipped engines (v0.2.8 code, 36 new FLEURS
+clips in English/Japanese/Mandarin + one 17-minute AMI meeting, 3 repeats,
+[report](eval/mmv_readable_heldout_20260926.md)).** On read speech the
+readable draft is nearly verbatim: 0 invented tokens, ≤0.3 omitted tokens
+per 100, and the error rate against the reference is unchanged (English 12B
+−0.3 pt, 95% CI [−0.9, 0.0]; Japanese +0.1/+0.2 pt; Mandarin 0.0) — it does
+not repair recognition errors. Its `（※要確認）` markers land on real
+recognition errors most of the time (Japanese 18/21 and 24/33, Mandarin
+12/14 and 15/21 for 12B/26B) but leave roughly half of the error regions
+unmarked, and it placed no markers on English. On the meeting, where the
+default engine retained all 18 chunks unformatted, the readable engines
+formatted every chunk but removed 3.5 (12B) to 9.3 (26B) content tokens per
+100 — mostly function words and false starts — and 26B invented a numeral
+once (the numeric rule flagged that chunk). Punctuation position F1 was
+equal or slightly higher than the default. These numbers do not change the
+contract: readable output is a draft for human review.
+
 A sibling of [mobius-style/mmv](https://github.com/mobius-style/mmv): every
 LLM call goes through the MMV harness, never a raw API. v0.2 replaced the
 v0.1 rewrite-style formatter with this minimal-edit one; v0.1 remains
@@ -463,6 +480,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.9` | 2026-09-26 | documentation: held-out comparison of the shipped engines (default vs readable 12B/26B) added to `eval/` |
 | `v0.2.8` | 2026-09-26 | opt-in readable draft mode (`voice_readable.py`: rewrite for readability, `（※要確認）` markers for unclear spans, sentence-end chunking, 12B or digest-pinned 26B); default engine and its guarantee unchanged |
 | `v0.2.7` | 2026-09-26 | landing page: dark mode restored (follows the OS `prefers-color-scheme`; light unchanged) |
 | `v0.2.6` | 2026-09-26 | sidebar layout fix for HiDPI displays (cloud-engine choice was clipped at 1.33× scaling); v0.3 / v0.3b HOLD reports added to `eval/`; stale "being measured" wording and diagram label updated |

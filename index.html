@@ -78,7 +78,7 @@ bash launch.sh            # opens the app</code></pre>
     <li>The "Review" tab shows source, candidate and reason for every chunk.</li>
     <li>Save the text (optional: minutes or a digest file).</li>
   </ol>
-  <p><strong>Optional readable draft (off by default).</strong> A checkbox in "Optional steps" lets the local model rewrite for readability instead of only adding punctuation. In that mode the word-and-number guarantee does not apply; unclear names and phrases are kept as heard and marked <code>（※要確認）</code> ("please verify"), the original and a diff stay in the Review tab, and every result needs human review. Measured on 38 known inputs, not a held-out test: <a href="eval/mmv_readable_v2_20260926.md">readable-mode report</a>.</p>
+  <p><strong>Optional readable draft (off by default).</strong> A checkbox in "Optional steps" lets the local model rewrite for readability instead of only adding punctuation. In that mode the word-and-number guarantee does not apply; unclear names and phrases are kept as heard and marked <code>（※要確認）</code> ("please verify"), the original and a diff stay in the Review tab, and every result needs human review. Measured on 38 known inputs (<a href="eval/mmv_readable_v2_20260926.md">report</a>) and on 36 new clips plus one meeting with the shipped code (<a href="eval/mmv_readable_heldout_20260926.md">held-out comparison</a>): on read speech it invents nothing and repairs nothing (error rate unchanged); on a meeting it drops 3.5–9.3 content words per 100, so review stays mandatory.</p>
 
   <h2>How your words are protected</h2>
   <figure>

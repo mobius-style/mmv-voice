@@ -40,7 +40,7 @@ OMIT_MAX_PER100 = 3.0
 OMIT_MAX_ABS = 1
 OMIT_MAX_CAP = 15          # never more than this many content tokens, however long the chunk
 # Fillers are removed from the SOURCE before counting omissions. Only unambiguous ones: words that
-# can carry content (right, like, so, mean, know; その; 这个/就是/然后) are deliberately NOT here,
+# can carry content (right, like, so, mean, know; the Japanese and Chinese demonstratives) are deliberately NOT here,
 # so dropping them counts as an omission. English filler phrases are removed as phrases.
 FILLERS = {
     'en': {'um', 'uh', 'er', 'ah', 'hmm', 'mm', 'mhm', 'okay', 'ok', 'yeah', 'yep', 'well', 'actually', 'basically'},
@@ -49,14 +49,14 @@ FILLERS = {
     'zh': ('那个', '嗯', '呃', '啊', '哦'),
 }
 # Guard-side negation counts (broader than the marker lexicon on purpose: a count change here only ever
-# retains the source, so adjective endings such as 少ない or idioms such as 不错 cost at most a retention).
+# retains the source, so a Japanese adjective ending in -nai or a Chinese idiom containing bu costs at most a retention).
 GUARD_NEGATION = {
     'en': re.compile(r"\b(?:not|never|no|nothing|nobody|none|cannot|can't|don't|doesn't|didn't|isn't|aren't|wasn't|weren't|won't|haven't|hasn't|without)\b", re.I),
     'ja': re.compile(r'ません|なかった|ない|ではなく|じゃなく|未定'),
     'zh': re.compile(r'[不没无非未]'),
 }
 # Japanese kana-only content: an added kana run that cannot be built from grammatical fragments is content
-# (e.g. すべて, ずっと, もっと). Fragments: particles, auxiliaries, common connectives and demonstrative pronouns.
+# (e.g. the kana words for 'all', 'always', 'more'). Fragments: particles, auxiliaries, common connectives and demonstrative pronouns.
 KANA_FUNCTION = ('ます', 'ました', 'ません', 'ませんでした', 'です', 'でした', 'でしょう', 'だろう', 'ている', 'ています', 'ていた', 'てある', 'ておく',
                  'ください', 'こと', 'もの', 'ため', 'ように', 'ような', 'など', 'また', 'そして', 'しかし', 'ただし', 'ので', 'から', 'まで', 'より',
                  'について', 'という', 'といった', 'これ', 'それ', 'あれ', 'この', 'その', 'ここ', 'そこ', 'それで', 'それから', 'つまり', 'なお',
@@ -128,7 +128,7 @@ def readable_postcondition(source, candidate, lang='ja'):
     if omitted > min(OMIT_MAX_CAP, max(OMIT_MAX_ABS, OMIT_MAX_PER100 * len(src) / 100.0)):
         violations.append(f'omission_over_limit:{omitted}/{len(src)}')
     # Polarity is content: the number of negation expressions must not change (a dropped "not" is one token
-    # and would otherwise slip under the omission allowance; an added ません / 行かない is kana-only).
+    # and would otherwise slip under the omission allowance; an added Japanese negative ending is kana-only).
     neg = GUARD_NEGATION[key]
     if len(neg.findall(source.lower())) != len(neg.findall(candidate.replace('（※要確認）', '').lower())):
         violations.append('negation_count_changed')

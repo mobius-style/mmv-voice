@@ -50,19 +50,19 @@ these holds:
   self-correction that keeps both values passes, one that drops the first
   value does not; kanji numerals and number words are not recognised;
 - the number of negation expressions differs (`negation_count_changed`) — a
-  dropped "not" or an added ません is one token and would otherwise pass;
+  dropped "not" or an added `ません` is one token and would otherwise pass;
 - more than min(15, max(1, 3 per 100 source tokens)) content tokens are
   missing from the draft, after removing an unambiguous filler list (um, uh,
-  okay, well, えー, あの, 嗯 … and the phrases "you know" / "I mean" / "sort
-  of" / "kind of"); words that can carry content (right, like, so, その, あの,
-  这个) are not treated as fillers (`omission_over_limit`);
+  okay, well, `えー`, `あのー`, `嗯` … and the phrases "you know" / "I mean" /
+  "sort of" / "kind of"); words that can carry content (right, like, so,
+  `その`, `あの`, `这个`) are not treated as fillers (`omission_over_limit`);
 - the draft contains content the source does not: English words outside a
   small function-word list, Japanese kanji or kana runs that cannot be built
-  from particles / auxiliaries / formal nouns (so すべて counts, ています does
-  not), Mandarin characters outside a small function-character list
-  (`content_added`). Japanese negation is counted on 〜ない / 〜なかった /
-  ません / ではなく; Mandarin on 不 没 无 非 未; English on not / never / no /
-  without and contracted forms.
+  from particles / auxiliaries / formal nouns (so `すべて` counts, `ています`
+  does not), Mandarin characters outside a small function-character list
+  (`content_added`). Japanese negation is counted on `ない` / `なかった` /
+  `ません` / `ではなく`; Mandarin on `不 没 无 非 未`; English on not / never /
+  no / without and contracted forms.
 
 This bounds what a readable draft can do; it does not make it correct. It
 cannot see a meaning change made with the same tokens, and it will retain

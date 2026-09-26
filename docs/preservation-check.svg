@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 330" role="img" aria-label="The preservation check compares each candidate with Whisper's text. A candidate that only adds punctuation is used; a candidate that changes a number or a word is discarded and Whisper's text is kept." font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2937"/></marker>
+  </defs>
+  <rect width="980" height="330" fill="#ffffff"/>
+  <text x="20" y="38" font-size="20" font-weight="700" fill="#111827">How words and numbers are protected</text>
+
+  <!-- source -->
+  <text x="20" y="80" font-size="13" font-weight="700" fill="#374151">Whisper transcript (source)</text>
+  <rect x="20" y="90" width="940" height="40" rx="8" fill="#f3f4f6" stroke="#9ca3af"/>
+  <text x="36" y="115" font-size="14" fill="#111827" font-family="ui-monospace, Menlo, Consolas, monospace">The invoice total is 4,200 dollars and it is due on Friday</text>
+
+  <!-- candidate A -->
+  <text x="20" y="168" font-size="13" font-weight="700" fill="#374151">Candidate 1 from the local model</text>
+  <rect x="20" y="178" width="620" height="40" rx="8" fill="#f0fdf4" stroke="#15803d" stroke-width="1.8"/>
+  <text x="36" y="203" font-size="14" fill="#111827" font-family="ui-monospace, Menlo, Consolas, monospace">The invoice total is 4,200 dollars<tspan fill="#15803d" font-weight="700">,</tspan> and it is due on Friday<tspan fill="#15803d" font-weight="700">.</tspan></text>
+  <line x1="640" y1="198" x2="700" y2="198" stroke="#1f2937" stroke-width="1.6" marker-end="url(#b)"/>
+  <rect x="702" y="178" width="258" height="40" rx="8" fill="#fff" stroke="#15803d" stroke-width="2"/>
+  <text x="831" y="196" font-size="13" font-weight="700" fill="#15803d" text-anchor="middle">✔ used</text>
+  <text x="831" y="211" font-size="12" fill="#374151" text-anchor="middle">only punctuation added</text>
+
+  <!-- candidate B -->
+  <text x="20" y="256" font-size="13" font-weight="700" fill="#374151">Candidate 2 from the local model</text>
+  <rect x="20" y="266" width="620" height="40" rx="8" fill="#fffbeb" stroke="#b45309" stroke-width="1.8"/>
+  <text x="36" y="291" font-size="14" fill="#111827" font-family="ui-monospace, Menlo, Consolas, monospace">The invoice total is <tspan fill="#b45309" font-weight="700" text-decoration="underline">4,300</tspan> dollars, and <tspan fill="#b45309" font-weight="700" text-decoration="underline">it's</tspan> due on Friday.</text>
+  <line x1="640" y1="286" x2="700" y2="286" stroke="#1f2937" stroke-width="1.6" marker-end="url(#b)"/>
+  <rect x="702" y="266" width="258" height="40" rx="8" fill="#fff" stroke="#b45309" stroke-width="2"/>
+  <text x="831" y="284" font-size="13" font-weight="700" fill="#b45309" text-anchor="middle">✘ discarded → source kept</text>
+  <text x="831" y="299" font-size="12" fill="#374151" text-anchor="middle">a number and a word changed</text>
+</svg>

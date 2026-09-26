@@ -1,0 +1,1347 @@
+{
+  "study": {
+    "date": "2026-09-26",
+    "classification": "exploratory descriptive local engineering measurement",
+    "plan_sha256": "b841d8fffdba1f827290882d7ea107c59250bcf580b03fb0a231db0697c51185",
+    "e2_prompt_sha256": "2e132c35f9a37a686a048b6855eec31f44e7feea048c179d47ff41e15b5000ac",
+    "scorer_source": "Reused punctuation position and position+type scorer from mmv_voice_zh_20260926/score_results.py",
+    "scorer_sha256": "a32fd7a93ae8a999b9fc165078393d39449858ec9127bd43d98dc4de6b7ba325",
+    "bootstrap_iterations": 10000,
+    "bootstrap_seed": 20260926,
+    "clips": 12,
+    "formatter_outputs": 72
+  },
+  "calibration": {
+    "known_good_exact": "passed",
+    "known_bad_no_punctuation": "passed",
+    "position_vs_type_discrimination": "passed",
+    "shifted_boundary": "passed",
+    "ascii_full_width_mapping": "passed",
+    "cer_punctuation_removal": "passed",
+    "cer_substitution": "passed"
+  },
+  "selection": {
+    "dataset": "google/fleurs",
+    "config": "en_us",
+    "split": "test",
+    "revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+    "metadata_url": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/en_us/test.tsv",
+    "audio_url": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/en_us/audio/test.tar.gz",
+    "previously_used_count": 16,
+    "previously_used_text_ids": [
+      "1669",
+      "1673",
+      "1674",
+      "1675",
+      "1699",
+      "1728",
+      "1771",
+      "1798",
+      "1832",
+      "1860",
+      "1877",
+      "1914",
+      "1915",
+      "1935",
+      "1949",
+      "1980"
+    ],
+    "selection_rule": "First 12 rows in test.tsv order after excluding prior text IDs and normalized duplicate references."
+  },
+  "raw_punctuation": {
+    "position": {
+      "tp": 33,
+      "pred": 33,
+      "gold": 45,
+      "precision": 1.0,
+      "recall": 0.7333333333333333,
+      "f1": 0.846153846153846,
+      "bootstrap_ci95": [
+        0.7887323943661972,
+        0.9032258064516129
+      ]
+    },
+    "position_type": {
+      "tp": 32,
+      "pred": 33,
+      "gold": 45,
+      "precision": 0.9696969696969697,
+      "recall": 0.7111111111111111,
+      "f1": 0.8205128205128205,
+      "bootstrap_ci95": [
+        0.7179487179487178,
+        0.9014084507042254
+      ]
+    },
+    "outputs": 12,
+    "clips": 12,
+    "mean_content_alignment_distance": 6.166666666666667
+  },
+  "prompts": {
+    "E1": {
+      "acceptance_runs": {
+        "accepted": 33,
+        "total": 36,
+        "rate": 0.9166666666666666
+      },
+      "acceptance_clips_all_repeats": {
+        "accepted": 11,
+        "total": 12,
+        "rate": 0.9166666666666666,
+        "bootstrap_ci95": [
+          0.75,
+          1.0
+        ]
+      },
+      "statuses": {
+        "formatted": 28,
+        "source_retained": 3,
+        "unchanged": 5
+      },
+      "reasons": {
+        "lexical_postcondition_passed": 33,
+        "content_changed": 3
+      },
+      "repeat_outputs_identical_within_clip": false,
+      "median_seconds": 0.9153396635010722,
+      "punctuation": {
+        "position": {
+          "tp": 111,
+          "pred": 114,
+          "gold": 135,
+          "precision": 0.9736842105263158,
+          "recall": 0.8222222222222222,
+          "f1": 0.891566265060241,
+          "bootstrap_ci95": [
+            0.8490566037735848,
+            0.9393939393939394
+          ]
+        },
+        "position_type": {
+          "tp": 82,
+          "pred": 114,
+          "gold": 135,
+          "precision": 0.7192982456140351,
+          "recall": 0.6074074074074074,
+          "f1": 0.6586345381526104,
+          "bootstrap_ci95": [
+            0.5605980012894906,
+            0.7575757575757576
+          ]
+        },
+        "outputs": 36,
+        "clips": 12,
+        "mean_content_alignment_distance": 6.166666666666667
+      },
+      "delivered_minus_raw": {
+        "position": {
+          "delta_f1": 0.045412418906394914,
+          "bootstrap_ci95": [
+            -0.006840708859053672,
+            0.1051087235242832
+          ]
+        },
+        "position_type": {
+          "delta_f1": -0.16187828236021007,
+          "bootstrap_ci95": [
+            -0.218004176764812,
+            -0.10666666666666669
+          ]
+        }
+      }
+    },
+    "E2": {
+      "acceptance_runs": {
+        "accepted": 33,
+        "total": 36,
+        "rate": 0.9166666666666666
+      },
+      "acceptance_clips_all_repeats": {
+        "accepted": 11,
+        "total": 12,
+        "rate": 0.9166666666666666,
+        "bootstrap_ci95": [
+          0.75,
+          1.0
+        ]
+      },
+      "statuses": {
+        "formatted": 12,
+        "source_retained": 3,
+        "unchanged": 21
+      },
+      "reasons": {
+        "lexical_postcondition_passed": 33,
+        "content_changed": 3
+      },
+      "repeat_outputs_identical_within_clip": true,
+      "median_seconds": 0.9148599715008459,
+      "punctuation": {
+        "position": {
+          "tp": 108,
+          "pred": 111,
+          "gold": 135,
+          "precision": 0.972972972972973,
+          "recall": 0.8,
+          "f1": 0.8780487804878049,
+          "bootstrap_ci95": [
+            0.823529411764706,
+            0.935064935064935
+          ]
+        },
+        "position_type": {
+          "tp": 105,
+          "pred": 111,
+          "gold": 135,
+          "precision": 0.9459459459459459,
+          "recall": 0.7777777777777778,
+          "f1": 0.8536585365853658,
+          "bootstrap_ci95": [
+            0.7777777777777778,
+            0.9268292682926829
+          ]
+        },
+        "outputs": 36,
+        "clips": 12,
+        "mean_content_alignment_distance": 6.166666666666667
+      },
+      "delivered_minus_raw": {
+        "position": {
+          "delta_f1": 0.031894934333958846,
+          "bootstrap_ci95": [
+            -0.01818620992534025,
+            0.08664955070603342
+          ]
+        },
+        "position_type": {
+          "delta_f1": 0.03314571607254535,
+          "bootstrap_ci95": [
+            -0.016906504818383964,
+            0.0912360970677451
+          ]
+        }
+      }
+    }
+  },
+  "per_clip": [
+    {
+      "id": "en_us_1924",
+      "reference": "Four skiers in the women's sitting group failed to finish their runs, and 45 of the 117 total skiers in the Giant Slalom failed to rank in the race.",
+      "whisper_raw": " Four skiers in the women's skating group failed to finish their runs and 45 of the 117 total skiers in the giant slalom failed to rank in the race.",
+      "raw": {
+        "position": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 3,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8
+        },
+        "position_type": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 3,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Four skiers in the women's skating group failed to finish their runs; and 45 of the 117 total skiers in the giant slalom failed to rank in the race.",
+          " Four skiers in the women's skating group failed to finish their runs; and 45 of the 117 total skiers in the giant slalom failed to rank in the race.",
+          " Four skiers in the women's skating group failed to finish their runs; and 45 of the 117 total skiers in the giant slalom failed to rank in the race."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 6,
+          "pred": 9,
+          "gold": 9,
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "f1": 0.6666666666666666
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Four skiers in the women's skating group failed to finish their runs, and 45 of the 117 total skiers in the giant slalom failed to rank in the race.",
+          " Four skiers in the women's skating group failed to finish their runs, and 45 of the 117 total skiers in the giant slalom failed to rank in the race.",
+          " Four skiers in the women's skating group failed to finish their runs, and 45 of the 117 total skiers in the giant slalom failed to rank in the race."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    },
+    {
+      "id": "en_us_1684",
+      "reference": "Apia is the capital of Samoa. The town is on the island of Upolu and has a population of just under 40,000.",
+      "whisper_raw": " Appiah is the capital of Samoa. The town is on the island of Eupolu and has a population of just under 40,000.",
+      "raw": {
+        "position": {
+          "tp": 3,
+          "pred": 3,
+          "gold": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 3,
+          "pred": 3,
+          "gold": 3,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": false,
+        "statuses": [
+          "source_retained",
+          "source_retained",
+          "source_retained"
+        ],
+        "reasons": [
+          "content_changed",
+          "content_changed",
+          "content_changed"
+        ],
+        "outputs": [
+          " Appiah is the capital of Samoa. The town is on the island of Eupolu and has a population of just under 40,000.",
+          " Appiah is the capital of Samoa. The town is on the island of Eupolu and has a population of just under 40,000.",
+          " Appiah is the capital of Samoa. The town is on the island of Eupolu and has a population of just under 40,000."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": false,
+        "statuses": [
+          "source_retained",
+          "source_retained",
+          "source_retained"
+        ],
+        "reasons": [
+          "content_changed",
+          "content_changed",
+          "content_changed"
+        ],
+        "outputs": [
+          " Appiah is the capital of Samoa. The town is on the island of Eupolu and has a population of just under 40,000.",
+          " Appiah is the capital of Samoa. The town is on the island of Eupolu and has a population of just under 40,000.",
+          " Appiah is the capital of Samoa. The town is on the island of Eupolu and has a population of just under 40,000."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    },
+    {
+      "id": "en_us_1936",
+      "reference": "Perry stated that he would \"return to Texas to assess the results of tonight's caucus, determine whether there is a path forward for myself in this race\", but later said that he would remain in the race and compete in the January 21 South Carolina primary.",
+      "whisper_raw": " Perry stated that he would return to Texas to assess the results of tonight's caucus, determining whether it is a path forward for myself in this race, but later said that he would remain in the race and compete in the January 21 South Carolina primary.",
+      "raw": {
+        "position": {
+          "tp": 4,
+          "pred": 4,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8
+        },
+        "position_type": {
+          "tp": 4,
+          "pred": 4,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Perry stated that he would return to Texas to assess the results of tonight's caucus; determining whether it is a path forward for myself in this race; but later said that he would remain in the race and compete in the January 21 South Carolina primary.",
+          " Perry stated that he would return to Texas to assess the results of tonight's caucus; determining whether it is a path forward for myself in this race, but later said that he would remain in the race and compete in the January 21 South Carolina primary.",
+          " Perry stated that he would return to Texas to assess the results of tonight's caucus; determining whether it is a path forward for myself in this race, but later said that he would remain in the race and compete in the January 21 South Carolina primary."
+        ],
+        "position": {
+          "tp": 12,
+          "pred": 12,
+          "gold": 18,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8
+        },
+        "position_type": {
+          "tp": 8,
+          "pred": 12,
+          "gold": 18,
+          "precision": 0.6666666666666666,
+          "recall": 0.4444444444444444,
+          "f1": 0.5333333333333333
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "unchanged",
+          "unchanged",
+          "unchanged"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Perry stated that he would return to Texas to assess the results of tonight's caucus, determining whether it is a path forward for myself in this race, but later said that he would remain in the race and compete in the January 21 South Carolina primary.",
+          " Perry stated that he would return to Texas to assess the results of tonight's caucus, determining whether it is a path forward for myself in this race, but later said that he would remain in the race and compete in the January 21 South Carolina primary.",
+          " Perry stated that he would return to Texas to assess the results of tonight's caucus, determining whether it is a path forward for myself in this race, but later said that he would remain in the race and compete in the January 21 South Carolina primary."
+        ],
+        "position": {
+          "tp": 12,
+          "pred": 12,
+          "gold": 18,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8
+        },
+        "position_type": {
+          "tp": 12,
+          "pred": 12,
+          "gold": 18,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8
+        }
+      }
+    },
+    {
+      "id": "en_us_1661",
+      "reference": "He did not set a figure for the cuts, saying they will be made based on China's economic output.",
+      "whisper_raw": " He did not set a figure for the cuts saying they will be made based on China's economic output.",
+      "raw": {
+        "position": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 3,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8
+        },
+        "position_type": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 3,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " He did not set a figure for the cuts; saying they will be made based on China's economic output.",
+          " He did not set a figure for the cuts; saying they will be made based on China's economic output.",
+          " He did not set a figure for the cuts; saying they will be made based on China's economic output."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 6,
+          "pred": 9,
+          "gold": 9,
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "f1": 0.6666666666666666
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " He did not set a figure for the cuts, saying they will be made based on China's economic output.",
+          " He did not set a figure for the cuts, saying they will be made based on China's economic output.",
+          " He did not set a figure for the cuts, saying they will be made based on China's economic output."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 9,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    },
+    {
+      "id": "en_us_1721",
+      "reference": "After the dam was built in 1963, the seasonal floods that would spread sediment throughout the river were halted.",
+      "whisper_raw": " After the dam was built in 1963, the seasonal floods that would spread sediment throughout the river were halted.",
+      "raw": {
+        "position": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 2,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 2,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "unchanged",
+          "unchanged",
+          "unchanged"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " After the dam was built in 1963, the seasonal floods that would spread sediment throughout the river were halted.",
+          " After the dam was built in 1963, the seasonal floods that would spread sediment throughout the river were halted.",
+          " After the dam was built in 1963, the seasonal floods that would spread sediment throughout the river were halted."
+        ],
+        "position": {
+          "tp": 6,
+          "pred": 6,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 6,
+          "pred": 6,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "unchanged",
+          "unchanged",
+          "unchanged"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " After the dam was built in 1963, the seasonal floods that would spread sediment throughout the river were halted.",
+          " After the dam was built in 1963, the seasonal floods that would spread sediment throughout the river were halted.",
+          " After the dam was built in 1963, the seasonal floods that would spread sediment throughout the river were halted."
+        ],
+        "position": {
+          "tp": 6,
+          "pred": 6,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 6,
+          "pred": 6,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    },
+    {
+      "id": "en_us_1869",
+      "reference": "Its long jaws were studded with more than 70 razor-sharp teeth, along with an extra set in the roof of its mouth, meaning that there was no escape for anything that crossed its path.",
+      "whisper_raw": " Its long jaws were studded with more than 70 razor sharp teeth along with an extra set in the roof of its mouth, meaning that it was no escape for anything that crossed its path.",
+      "raw": {
+        "position": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 4,
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.6666666666666666
+        },
+        "position_type": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 4,
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.6666666666666666
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Its long jaws were studded with more than 70 razor sharp teeth; along with an extra set in the roof of its mouth, meaning that it was no escape for anything that crossed its path.",
+          " Its long jaws were studded with more than 70 razor sharp teeth; along with an extra set in the roof of its mouth, meaning that it was no escape for anything that crossed its path.",
+          " Its long jaws were studded with more than 70 razor sharp teeth; along with an extra set in the roof of its mouth, meaning that it was no escape for anything that crossed its path."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 12,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571
+        },
+        "position_type": {
+          "tp": 6,
+          "pred": 9,
+          "gold": 12,
+          "precision": 0.6666666666666666,
+          "recall": 0.5,
+          "f1": 0.5714285714285715
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "unchanged",
+          "unchanged",
+          "unchanged"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Its long jaws were studded with more than 70 razor sharp teeth along with an extra set in the roof of its mouth, meaning that it was no escape for anything that crossed its path.",
+          " Its long jaws were studded with more than 70 razor sharp teeth along with an extra set in the roof of its mouth, meaning that it was no escape for anything that crossed its path.",
+          " Its long jaws were studded with more than 70 razor sharp teeth along with an extra set in the roof of its mouth, meaning that it was no escape for anything that crossed its path."
+        ],
+        "position": {
+          "tp": 6,
+          "pred": 6,
+          "gold": 12,
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.6666666666666666
+        },
+        "position_type": {
+          "tp": 6,
+          "pred": 6,
+          "gold": 12,
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.6666666666666666
+        }
+      }
+    },
+    {
+      "id": "en_us_1893",
+      "reference": "The Sundarbans are the largest littoral mangrove belt in the world, stretching 80 km (50 mi) into the Bangladeshi and Indian hinterland from the coast.",
+      "whisper_raw": " The Sundarbans are the largest littoral mangrove belt in the world stretching 80 kilometers, 50 miles into the Bangladeshi and Indian hinterland from the coast.",
+      "raw": {
+        "position": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 4,
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.6666666666666666
+        },
+        "position_type": {
+          "tp": 1,
+          "pred": 2,
+          "gold": 4,
+          "precision": 0.5,
+          "recall": 0.25,
+          "f1": 0.3333333333333333
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " The Sundarbans are the largest littoral mangrove belt in the world; stretching 80 kilometers, 50 miles into the Bangladeshi and Indian hinterland from the coast.",
+          " The Sundarbans are the largest littoral mangrove belt in the world; stretching 80 kilometers, 50 miles into the Bangladeshi and Indian hinterland from the coast.",
+          " The Sundarbans are the largest littoral mangrove belt in the world; stretching 80 kilometers, 50 miles into the Bangladeshi and Indian hinterland from the coast."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 12,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571
+        },
+        "position_type": {
+          "tp": 3,
+          "pred": 9,
+          "gold": 12,
+          "precision": 0.3333333333333333,
+          "recall": 0.25,
+          "f1": 0.28571428571428575
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " The Sundarbans are the largest littoral mangrove belt in the world, stretching 80 kilometers, 50 miles into the Bangladeshi and Indian hinterland from the coast.",
+          " The Sundarbans are the largest littoral mangrove belt in the world, stretching 80 kilometers, 50 miles into the Bangladeshi and Indian hinterland from the coast.",
+          " The Sundarbans are the largest littoral mangrove belt in the world, stretching 80 kilometers, 50 miles into the Bangladeshi and Indian hinterland from the coast."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 12,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571
+        },
+        "position_type": {
+          "tp": 6,
+          "pred": 9,
+          "gold": 12,
+          "precision": 0.6666666666666666,
+          "recall": 0.5,
+          "f1": 0.5714285714285715
+        }
+      }
+    },
+    {
+      "id": "en_us_1735",
+      "reference": "Researchers from Princeton University in the United States and Uppsala University in Sweden reported the new species evolved in just two generations, though this process had been believed to take much longer, due to breeding between an endemic Darwin finch, Geospiza fortes, and the immigrant cactus finch, Geospiza conirostris.",
+      "whisper_raw": " Researchers from Princeton University in the United States and Uppsala University in Sweden reported the new species evolved in just two generations, though this process has believed to take much longer due to the breeding between an endemic Darwin finch, Giospisa fortis, and the immigrant cactus finch, Giospisa conirostris.",
+      "raw": {
+        "position": {
+          "tp": 5,
+          "pred": 5,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 0.8333333333333334,
+          "f1": 0.9090909090909091
+        },
+        "position_type": {
+          "tp": 5,
+          "pred": 5,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 0.8333333333333334,
+          "f1": 0.9090909090909091
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Researchers from Princeton University in the United States and Uppsala University in Sweden reported the new species evolved in just two generations; though this process has believed to take much longer due to the breeding between an endemic Darwin finch, Giospisa fortis, and the immigrant cactus finch, Giospisa conirostris.",
+          " Researchers from Princeton University in the United States and Uppsala University in Sweden reported the new species evolved in just two generations; though this process has believed to take much longer due to the breeding between an endemic Darwin finch, Giospisa fortis, and the immigrant cactus finch, Giospisa conirostris.",
+          " Researchers from Princeton University in the United States and Uppsala University in Sweden reported the new species evolved in just two generations; though this process has believed to take much longer due to the breeding between an endemic Darwin finch, Giospisa fortis, and the immigrant cactus finch, Giospisa conirostris."
+        ],
+        "position": {
+          "tp": 15,
+          "pred": 15,
+          "gold": 18,
+          "precision": 1.0,
+          "recall": 0.8333333333333334,
+          "f1": 0.9090909090909091
+        },
+        "position_type": {
+          "tp": 12,
+          "pred": 15,
+          "gold": 18,
+          "precision": 0.8,
+          "recall": 0.6666666666666666,
+          "f1": 0.7272727272727272
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "unchanged",
+          "unchanged",
+          "unchanged"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Researchers from Princeton University in the United States and Uppsala University in Sweden reported the new species evolved in just two generations, though this process has believed to take much longer due to the breeding between an endemic Darwin finch, Giospisa fortis, and the immigrant cactus finch, Giospisa conirostris.",
+          " Researchers from Princeton University in the United States and Uppsala University in Sweden reported the new species evolved in just two generations, though this process has believed to take much longer due to the breeding between an endemic Darwin finch, Giospisa fortis, and the immigrant cactus finch, Giospisa conirostris.",
+          " Researchers from Princeton University in the United States and Uppsala University in Sweden reported the new species evolved in just two generations, though this process has believed to take much longer due to the breeding between an endemic Darwin finch, Giospisa fortis, and the immigrant cactus finch, Giospisa conirostris."
+        ],
+        "position": {
+          "tp": 15,
+          "pred": 15,
+          "gold": 18,
+          "precision": 1.0,
+          "recall": 0.8333333333333334,
+          "f1": 0.9090909090909091
+        },
+        "position_type": {
+          "tp": 15,
+          "pred": 15,
+          "gold": 18,
+          "precision": 1.0,
+          "recall": 0.8333333333333334,
+          "f1": 0.9090909090909091
+        }
+      }
+    },
+    {
+      "id": "en_us_1996",
+      "reference": "Australia's Mitchell Gourley finished eleventh in the men's standing Super-G. Czech competitor Oldrich Jelinek finished sixteenth in the men's sitting Super-G.",
+      "whisper_raw": " Australia's Mitchell Gourley finished 11th in the men's standing Super G. Czech competitor Uldrich Dylenic finished 16th in the men's sitting Super G.",
+      "raw": {
+        "position": {
+          "tp": 5,
+          "pred": 5,
+          "gold": 7,
+          "precision": 1.0,
+          "recall": 0.7142857142857143,
+          "f1": 0.8333333333333333
+        },
+        "position_type": {
+          "tp": 5,
+          "pred": 5,
+          "gold": 7,
+          "precision": 1.0,
+          "recall": 0.7142857142857143,
+          "f1": 0.8333333333333333
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Australia's Mitchell Gourley finished 11th in the men's standing Super G; Czech competitor Uldrich Dylenic finished 16th in the men's sitting Super G.",
+          " Australia's Mitchell Gourley finished 11th in the men's standing Super G; Czech competitor Uldrich Dylenic finished 16th in the men's sitting Super G.",
+          " Australia's Mitchell Gourley finished 11th in the men's standing Super G; Czech competitor Uldrich Dylenic finished 16th in the men's sitting Super G."
+        ],
+        "position": {
+          "tp": 15,
+          "pred": 15,
+          "gold": 21,
+          "precision": 1.0,
+          "recall": 0.7142857142857143,
+          "f1": 0.8333333333333333
+        },
+        "position_type": {
+          "tp": 12,
+          "pred": 15,
+          "gold": 21,
+          "precision": 0.8,
+          "recall": 0.5714285714285714,
+          "f1": 0.6666666666666666
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "unchanged",
+          "unchanged",
+          "unchanged"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Australia's Mitchell Gourley finished 11th in the men's standing Super G. Czech competitor Uldrich Dylenic finished 16th in the men's sitting Super G.",
+          " Australia's Mitchell Gourley finished 11th in the men's standing Super G. Czech competitor Uldrich Dylenic finished 16th in the men's sitting Super G.",
+          " Australia's Mitchell Gourley finished 11th in the men's standing Super G. Czech competitor Uldrich Dylenic finished 16th in the men's sitting Super G."
+        ],
+        "position": {
+          "tp": 15,
+          "pred": 15,
+          "gold": 21,
+          "precision": 1.0,
+          "recall": 0.7142857142857143,
+          "f1": 0.8333333333333333
+        },
+        "position_type": {
+          "tp": 15,
+          "pred": 15,
+          "gold": 21,
+          "precision": 1.0,
+          "recall": 0.7142857142857143,
+          "f1": 0.8333333333333333
+        }
+      }
+    },
+    {
+      "id": "en_us_1866",
+      "reference": "First, most riders wear riding boots with a heel and a smooth, quite narrow, sole.",
+      "whisper_raw": " First, most riders wearing riding boots with a heel and a smooth, quite narrow sole.",
+      "raw": {
+        "position": {
+          "tp": 3,
+          "pred": 3,
+          "gold": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571
+        },
+        "position_type": {
+          "tp": 3,
+          "pred": 3,
+          "gold": 4,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "unchanged",
+          "unchanged"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " First, most riders wearing riding boots with a heel and a smooth; quite narrow sole.",
+          " First, most riders wearing riding boots with a heel and a smooth, quite narrow sole.",
+          " First, most riders wearing riding boots with a heel and a smooth, quite narrow sole."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 12,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571
+        },
+        "position_type": {
+          "tp": 8,
+          "pred": 9,
+          "gold": 12,
+          "precision": 0.8888888888888888,
+          "recall": 0.6666666666666666,
+          "f1": 0.761904761904762
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "unchanged",
+          "unchanged",
+          "unchanged"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " First, most riders wearing riding boots with a heel and a smooth, quite narrow sole.",
+          " First, most riders wearing riding boots with a heel and a smooth, quite narrow sole.",
+          " First, most riders wearing riding boots with a heel and a smooth, quite narrow sole."
+        ],
+        "position": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 12,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571
+        },
+        "position_type": {
+          "tp": 9,
+          "pred": 9,
+          "gold": 12,
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571
+        }
+      }
+    },
+    {
+      "id": "en_us_1742",
+      "reference": "Hong Kong Island gives the territory of Hong Kong its name and is the place that many tourists regard as the main focus.",
+      "whisper_raw": " Hong Kong Island gives the territory of Hong Kong its name and is a place that many tourists regard as the main focus.",
+      "raw": {
+        "position": {
+          "tp": 1,
+          "pred": 1,
+          "gold": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 1,
+          "pred": 1,
+          "gold": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Hong Kong Island gives the territory of Hong Kong its name; and is a place that many tourists regard as the main focus.",
+          " Hong Kong Island gives the territory of Hong Kong its name; and is a place that many tourists regard as the main focus.",
+          " Hong Kong Island gives the territory of Hong Kong its name; and is a place that many tourists regard as the main focus."
+        ],
+        "position": {
+          "tp": 3,
+          "pred": 6,
+          "gold": 3,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666
+        },
+        "position_type": {
+          "tp": 3,
+          "pred": 6,
+          "gold": 3,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Hong Kong Island gives the territory of Hong Kong its name, and is a place that many tourists regard as the main focus.",
+          " Hong Kong Island gives the territory of Hong Kong its name, and is a place that many tourists regard as the main focus.",
+          " Hong Kong Island gives the territory of Hong Kong its name, and is a place that many tourists regard as the main focus."
+        ],
+        "position": {
+          "tp": 3,
+          "pred": 6,
+          "gold": 3,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666
+        },
+        "position_type": {
+          "tp": 3,
+          "pred": 6,
+          "gold": 3,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666
+        }
+      }
+    },
+    {
+      "id": "en_us_1977",
+      "reference": "Prides are made up of one to three related adult males, along with as many as thirty females and cubs.",
+      "whisper_raw": " Rides are made up of one to three related adult males, along with as many as 30 females and cubs.",
+      "raw": {
+        "position": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 2,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 2,
+          "pred": 2,
+          "gold": 2,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "E1": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "formatted",
+          "formatted",
+          "formatted"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Rides are made up of one to three related adult males; along with as many as 30 females and cubs.",
+          " Rides are made up of one to three related adult males; along with as many as 30 females and cubs.",
+          " Rides are made up of one to three related adult males; along with as many as 30 females and cubs."
+        ],
+        "position": {
+          "tp": 6,
+          "pred": 6,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 3,
+          "pred": 6,
+          "gold": 6,
+          "precision": 0.5,
+          "recall": 0.5,
+          "f1": 0.5
+        }
+      },
+      "E2": {
+        "accepted_all_repeats": true,
+        "statuses": [
+          "unchanged",
+          "unchanged",
+          "unchanged"
+        ],
+        "reasons": [
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed",
+          "lexical_postcondition_passed"
+        ],
+        "outputs": [
+          " Rides are made up of one to three related adult males, along with as many as 30 females and cubs.",
+          " Rides are made up of one to three related adult males, along with as many as 30 females and cubs.",
+          " Rides are made up of one to three related adult males, along with as many as 30 females and cubs."
+        ],
+        "position": {
+          "tp": 6,
+          "pred": 6,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "position_type": {
+          "tp": 6,
+          "pred": 6,
+          "gold": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    }
+  ],
+  "decision_rule_values": {
+    "raw_position_type_f1": 0.8205128205128205,
+    "raw_minus_0_02": 0.8005128205128205,
+    "e1_position_type_f1": 0.6586345381526104,
+    "e2_position_type_f1": 0.8536585365853658,
+    "e1_accepted_clips": 11,
+    "e2_accepted_clips": 11
+  },
+  "gates": {
+    "a_e2_at_least_raw_minus_0_02": true,
+    "b_e2_at_least_e1": true,
+    "c_e2_acceptance_at_least_e1_minus_1_clip": true
+  },
+  "decision": "ADOPT E2",
+  "patched_copy_tests": {
+    "command": "PYTHONPATH=. python3 -m unittest discover -s tests -p 'test_mmv_formatter.py' -v",
+    "passed": 9,
+    "failed": 0,
+    "result": "OK",
+    "tests_need_changes": false,
+    "record": "TESTS_A.txt"
+  },
+  "method": {
+    "punctuation": "Common punctuation types are normalized; whitespace and punctuation are removed for deterministic minimum-edit content alignment; hypothesis punctuation boundaries are projected onto reference boundaries; micro F1 is reported for position and position+type.",
+    "bootstrap": "Percentile 95% CI from 10,000 resamples of 12 independent clip IDs with replacement. Three formatter repeats remain clustered within each selected clip.",
+    "clip_acceptance": "A clip is accepted only if the unchanged shipped validator accepts all three repeats."
+  }
+}

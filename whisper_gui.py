@@ -86,6 +86,13 @@ MMV_LOAD_ERR = None   # If M cannot be loaded, the whole formatting feature is d
 MMV_L_ERR    = None   # If L cannot be loaded, only the cloud switch is disabled
 
 from voice_mmv import MMVFormatter, MODEL, PROFILE_PATH, audit_report
+
+
+def whisper_weights_path(name=None):
+    """Local cache file openai-whisper uses for the model (it downloads there when missing)."""
+    name = name or WHISPER_MODEL_SIZE
+    root = os.path.join(os.getenv("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "whisper")
+    return os.path.join(root, f"{name}.pt")
 try:
     sys.path.insert(0, MMV_ROOT)
     from harness.adapters import call_adapter
@@ -840,6 +847,22 @@ class WhisperMMVGUI:
         )
         if not filepath:
             return
+
+        # Local-first: openai-whisper would silently download its weights on
+        # first use. Ask before any network access (install.sh pre-fetches them).
+        weights = whisper_weights_path()
+        if not os.path.exists(weights):
+            ok = messagebox.askokcancel(
+                "Download Whisper weights?",
+                f"The Whisper model '{WHISPER_MODEL_SIZE}' is not on this computer yet.\n\n"
+                "Transcribing requires a one-time download (~1.6 GB for large-v3-turbo)\n"
+                "from OpenAI's model server to\n"
+                f"{weights}\n\n"
+                "No audio or text is sent — only the model file is downloaded.\n"
+                "After this, transcription works offline. Download now?")
+            if not ok:
+                self.status_var.set("Cancelled: Whisper weights not present (run: bash install.sh)")
+                return
 
         # Reset UI (called directly since this is the main thread)
         self.kill_flag.clear()

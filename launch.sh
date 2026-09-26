@@ -12,6 +12,9 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Settings written by install.sh (MMV_REPO); local file, never committed
+[ -f "$SCRIPT_DIR/.mmv-voice.env" ] && . "$SCRIPT_DIR/.mmv-voice.env"
+
 # ── Auto-detect the Python environment ──────────────────────
 # Priority: conda(whisper) > conda(base) > venv(.venv) > system python3
 find_python() {
@@ -43,8 +46,10 @@ find_python() {
     echo ""
 }
 
-# Resolution order: WISPER_PYTHON environment variable > pyenv 3.10.14 > find_python
-PYTHON="${WISPER_PYTHON:-$HOME/.pyenv/versions/3.10.14/bin/python3}"
+# Resolution: WISPER_PYTHON > ./.venv (created by install.sh) > pyenv 3.10.14 > auto-detect
+PYTHON="${WISPER_PYTHON:-}"
+[ -n "$PYTHON" ] && [ -x "$PYTHON" ] || PYTHON="$SCRIPT_DIR/.venv/bin/python"
+[ -x "$PYTHON" ] || PYTHON="$HOME/.pyenv/versions/3.10.14/bin/python3"
 [ -x "$PYTHON" ] || PYTHON=$(find_python)
 
 if [ -z "$PYTHON" ]; then

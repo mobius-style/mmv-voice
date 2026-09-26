@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 460" role="img" aria-label="Everything runs inside your computer: audio goes to local Whisper, then to a local Gemma model on a loopback address, then through a word-and-number check. The network is used only once at install time; the cloud engine is opt-in and off by default." font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f2937"/></marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+  </defs>
+  <rect width="980" height="460" fill="#ffffff"/>
+
+  <!-- machine boundary -->
+  <rect x="20" y="70" width="730" height="370" rx="14" fill="#f0fdf4" stroke="#15803d" stroke-width="2.5"/>
+  <text x="40" y="100" font-size="16" font-weight="700" fill="#15803d">Your computer — audio, text and model never leave it</text>
+
+  <!-- row 1 boxes -->
+  <g font-size="13" fill="#111827" text-anchor="middle">
+    <rect x="40" y="130" width="130" height="64" rx="8" fill="#fff" stroke="#1f2937"/>
+    <text x="105" y="157" font-weight="600">Audio file</text><text x="105" y="176" fill="#4b5563">m4a · wav · mp3</text>
+
+    <rect x="215" y="130" width="160" height="64" rx="8" fill="#fff" stroke="#1f2937"/>
+    <text x="295" y="152" font-weight="600">Whisper</text><text x="295" y="170" fill="#4b5563">large-v3-turbo</text><text x="295" y="186" fill="#4b5563">local GPU</text>
+
+    <rect x="420" y="130" width="140" height="64" rx="8" fill="#fff" stroke="#1f2937"/>
+    <text x="490" y="157" font-weight="600">Transcript</text><text x="490" y="176" fill="#4b5563">split ≤ 1000 chars</text>
+
+    <rect x="605" y="130" width="125" height="64" rx="8" fill="#fff" stroke="#1f2937"/>
+    <text x="667" y="152" font-weight="600">Gemma 4 12B</text><text x="667" y="170" fill="#4b5563">via Ollama</text><text x="667" y="186" fill="#4b5563">127.0.0.1 only</text>
+  </g>
+  <g stroke="#1f2937" stroke-width="1.6" fill="none">
+    <line x1="170" y1="162" x2="213" y2="162" marker-end="url(#a)"/>
+    <line x1="375" y1="162" x2="418" y2="162" marker-end="url(#a)"/>
+    <line x1="560" y1="162" x2="603" y2="162" marker-end="url(#a)"/>
+    <!-- down to check -->
+    <polyline points="667,194 667,230 560,230" marker-end="url(#a)"/>
+    <polyline points="490,194 490,215" stroke-dasharray="4 3"/>
+  </g>
+  <text x="614" y="222" font-size="12" fill="#374151" text-anchor="middle">candidate</text>
+  <text x="498" y="210" font-size="12" fill="#374151">source</text>
+
+  <!-- check -->
+  <rect x="380" y="216" width="180" height="70" rx="8" fill="#fff" stroke="#15803d" stroke-width="2"/>
+  <text x="470" y="244" font-size="13" font-weight="700" fill="#15803d" text-anchor="middle">Preservation check</text>
+  <text x="470" y="264" font-size="12" fill="#374151" text-anchor="middle">same words? same numbers?</text>
+
+  <!-- outcomes -->
+  <g stroke="#1f2937" stroke-width="1.6" fill="none">
+    <polyline points="420,286 420,330 330,330" marker-end="url(#a)"/>
+    <polyline points="520,286 520,330 605,330" marker-end="url(#a)"/>
+  </g>
+  <text x="414" y="316" font-size="12" fill="#15803d" text-anchor="end">yes → use it</text>
+  <text x="526" y="316" font-size="12" fill="#b45309">no → discard</text>
+  <g font-size="13" text-anchor="middle">
+    <rect x="160" y="305" width="170" height="52" rx="8" fill="#fff" stroke="#1f2937"/>
+    <text x="245" y="327" font-weight="600" fill="#111827">Punctuated text</text><text x="245" y="345" fill="#4b5563">words unchanged</text>
+    <rect x="605" y="305" width="125" height="52" rx="8" fill="#fff" stroke="#1f2937"/>
+    <text x="667" y="327" font-weight="600" fill="#111827">Whisper text</text><text x="667" y="345" fill="#4b5563">kept as is</text>
+  </g>
+  <g stroke="#1f2937" stroke-width="1.6" fill="none">
+    <polyline points="245,357 245,395 360,395" marker-end="url(#a)"/>
+    <polyline points="667,357 667,395 580,395" marker-end="url(#a)"/>
+  </g>
+  <rect x="360" y="372" width="220" height="48" rx="8" fill="#fff" stroke="#1f2937"/>
+  <text x="470" y="393" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Result + verification report</text>
+  <text x="470" y="411" font-size="12" fill="#4b5563" text-anchor="middle">source · candidate · reason per chunk</text>
+
+  <!-- outside -->
+  <text x="865" y="100" font-size="16" font-weight="700" fill="#6b7280" text-anchor="middle">Internet</text>
+  <rect x="790" y="120" width="150" height="86" rx="8" fill="#f9fafb" stroke="#6b7280" stroke-dasharray="5 4"/>
+  <text x="865" y="143" font-size="13" font-weight="600" fill="#374151" text-anchor="middle">Install, once</text>
+  <text x="865" y="162" font-size="12" fill="#4b5563" text-anchor="middle">pip packages</text>
+  <text x="865" y="176" font-size="12" fill="#4b5563" text-anchor="middle">Whisper weights · model</text>
+  <text x="865" y="192" font-size="12" fill="#4b5563" text-anchor="middle">git clone MMV (pinned)</text>
+  <line x1="790" y1="163" x2="752" y2="163" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ag)"/>
+  <text x="865" y="224" font-size="12" fill="#6b7280" text-anchor="middle">install.sh, or on your consent</text>
+
+  <rect x="790" y="290" width="150" height="86" rx="8" fill="#f9fafb" stroke="#6b7280" stroke-dasharray="5 4"/>
+  <text x="865" y="313" font-size="13" font-weight="600" fill="#374151" text-anchor="middle">Cloud engine</text>
+  <text x="865" y="332" font-size="12" fill="#4b5563" text-anchor="middle">off by default</text>
+  <text x="865" y="348" font-size="12" fill="#4b5563" text-anchor="middle">needs your API key</text>
+  <text x="865" y="364" font-size="12" fill="#4b5563" text-anchor="middle">asks before sending</text>
+  <line x1="752" y1="333" x2="788" y2="333" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ag)"/>
+  <text x="865" y="394" font-size="12" fill="#6b7280" text-anchor="middle">only if you choose it</text>
+
+  <text x="20" y="40" font-size="20" font-weight="700" fill="#111827">Where your data goes</text>
+</svg>

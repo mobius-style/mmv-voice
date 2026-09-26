@@ -24,41 +24,76 @@
   td.num, th.num { text-align:right; white-space:nowrap; }
   .links a { display:inline-block; margin:4px 12px 4px 0; }
   .note { border-left:3px solid var(--accent); padding:8px 12px; background:var(--code); border-radius:0 6px 6px 0; }
+  figure { margin:8px 0 20px; } .cap { color:var(--muted); font-size:.9rem; margin-top:6px; }
+  pre { background:var(--code); padding:12px; border-radius:6px; overflow-x:auto; font-size:.9rem; }
+  ol { padding-left:22px; }
   footer { margin-top:40px; color:var(--muted); font-size:.9rem; }
 </style>
 </head>
 <body>
 <main>
   <h1>MMV Voice</h1>
-  <p class="lead"><strong>Local-first.</strong> Whisper transcription → on-device Gemma punctuation → a deterministic check that rejects any change to words or numbers. Audio, text and models stay on your machine; nothing is sent anywhere unless you opt in. Linux desktop GUI, AGPL-3.0, no fine-tuning.</p>
+  <p class="lead"><strong>Private, local-first transcription.</strong> Turn recordings into punctuated text on your own computer. Audio, transcript and model stay on your machine — no account, no API key, no upload, no telemetry. The local model may only add punctuation: if it changes a single word or number, its output is discarded and Whisper's text is kept. Linux desktop app, AGPL-3.0.</p>
 
   <p class="links">
     <a href="https://github.com/mobius-style/mmv-voice">Source on GitHub</a>
     <a href="README.md">README</a>
     <a href="MMV_FORMAT_STATUS.md">Measured status (2026-09-25)</a>
+    <a href="eval/mmv_voice_v024_20260926.md">v0.2.4 evidence (2026-09-26)</a>
     <a href="eval/mmv_voice_zh_20260926.md">Mandarin reference (2026-09-26)</a>
     <a href="eval/mmv_format_12b_qat_20260924.md">Earlier trial on HOLD (2026-09-24)</a>
   </p>
 
-  <h2>English first</h2>
-  <p>Docs, UI, prompts and tests are written for English. On 8 held-out English FLEURS clips (3 runs each, identical output), <strong>no word or number changed on any clip and no clip fell back</strong> to the raw transcript: the delivered words are Whisper's own — the formatter is designed not to change them (enforced by the preservation check, covered by tests). A rewrite-style formatter (the approach used up to v0.1) can silently change words — on one of the same clips it reworded a list, and on another it returned a request for the transcript instead of formatted text.</p>
-  <p class="note">Known limitation: on this panel English punctuation got worse — each of the 7 changed clips gained a semicolon the reference lacks, in 4 replacing an existing comma. Only the words are guaranteed, not the punctuation (position F1 flat 0.766 → 0.769; type-aware 0.681 → 0.500). Small read-speech panel (8 clips; Wilson 95% for 8/8: 68–100%); FLEURS training overlap unresolved; noisy, multi-speaker and long recordings untested.</p>
+  <figure>
+    <img src="docs/local-first-dataflow.svg" alt="Where your data goes: everything runs inside your computer; the network is used once at install time; the cloud engine is opt-in and off by default" style="width:100%;height:auto;border:1px solid var(--line);border-radius:8px">
+    <figcaption class="cap">Everything runs inside your computer. The network is used once, by the installer; the cloud engine is opt-in and asks before sending.</figcaption>
+  </figure>
 
-  <h2>What it does</h2>
+  <h2>Local-first, concretely</h2>
   <ul>
-    <li>Runs entirely on your own computer by default: local Whisper, local Ollama model, loopback-only endpoint, no accounts, no telemetry.</li>
-    <li>Transcribes with Whisper <code>large-v3-turbo</code>, language auto-detected.</li>
-    <li>Asks a local <code>gemma4:12b-it-qat</code> (Ollama, through the MMV harness) to insert punctuation and line breaks <em>only</em>.</li>
-    <li>Rejects every candidate whose words or numbers differ from the transcript and keeps the raw text for that chunk; the report shows source, candidate and reason.</li>
-    <li>Checks the Ollama model digest before the first call; a different build is not used silently.</li>
-    <li>Optional, off by default: speaker attribution, an LLM fidelity pass, minutes, secretary digest export. An opt-in cloud engine exists and asks before sending anything off-machine.</li>
+    <li><strong>Audio never leaves your computer</strong> — Whisper runs locally (GPU if available).</li>
+    <li><strong>The model is local and the application enforces it</strong> — formatting goes to Ollama on a loopback address; the app refuses any other address before calling the model.</li>
+    <li><strong>Network once, at install</strong> — <code>install.sh</code> fetches packages, Whisper weights, the model and the MMV harness, asking first. With default settings the tool then makes no network calls while you work; if the Whisper weights are missing, it asks before downloading them (model file only). Opt-in extras — pyannote speaker attribution, the cloud engine — use the network.</li>
+    <li><strong>Nothing to sign up for</strong> — no account, key or licence server for the default engine.</li>
+    <li><strong>Cloud is opt-in, twice</strong> — off by default, needs your own key, confirms before sending.</li>
   </ul>
 
-  <h2>Measured on FLEURS read speech</h2>
+  <h2>Quick start</h2>
+<pre><code>git clone https://github.com/mobius-style/mmv-voice && cd mmv-voice
+bash install.sh --check   # shows what is missing; changes nothing
+bash install.sh           # installs locally, asks before every download
+bash launch.sh            # opens the app</code></pre>
+  <p>Linux desktop, Python 3.10+, <code>ffmpeg</code>, <code>python3-tk</code>, and <a href="https://ollama.com/download">Ollama</a> running. An NVIDIA GPU with 8–16 GB is recommended. The installer never uses <code>sudo</code> and never starts or stops Ollama.</p>
+
+  <h2>Using it</h2>
+  <ol>
+    <li>Open an audio file — transcription starts at once, language auto-detected.</li>
+    <li>Formatting follows: chunks of up to 1,000 characters go to the local model for punctuation and paragraph breaks.</li>
+    <li>Read the result; any chunk that failed the check is shown exactly as Whisper wrote it.</li>
+    <li>The "Verification report" tab shows source, candidate and reason for every chunk.</li>
+    <li>Save the text (optional: minutes or a digest file).</li>
+  </ol>
+
+  <h2>How your words are protected</h2>
+  <figure>
+    <img src="docs/preservation-check.svg" alt="A candidate that only adds punctuation is used; a candidate that changes a number or a word is discarded and Whisper's text is kept" style="width:100%;height:auto;border:1px solid var(--line);border-radius:8px">
+    <figcaption class="cap">Only punctuation and whitespace may differ from Whisper's text; anything else sends the chunk back to Whisper's version. Enforced in code and tests, not a formal proof; it cannot fix words Whisper misheard.</figcaption>
+  </figure>
+
+  <h2>English first</h2>
+  <p>Docs, UI, prompts and tests are written for English. v0.2.4 removes the one sentence that made the model add stray semicolons. On 12 <em>new</em> English FLEURS clips, punctuation now roughly matches Whisper's own (type-aware F1 <strong>0.854</strong> vs 0.821, intervals overlap) instead of clearly worse (v0.2: 0.659); v0.2.4 leaves most clips' punctuation alone (7 of 12) and adds punctuation on 4; 11 of 12 clips were accepted, and <strong>no word or number was ever changed</strong> — the one clip whose candidate changed a word fell back to Whisper's text.</p>
+  <p class="note">Small read-speech panels; the 95% intervals overlap; FLEURS training overlap unresolved. Details: <a href="eval/mmv_voice_v024_20260926.md">v0.2.4 evidence</a>.</p>
+
+  <h2>Long recordings: what to expect today</h2>
+  <p>On a real 17.5-minute, four-person meeting (AMI ES2004a), transcription took 32 s including model load (27 s transcribing) on one RTX 5070 Ti (WER 27% on overlapping, informal speech). Formatting stepped aside on 11 of 12 chunks, returning Whisper's text unchanged — your words stay safe, but on meetings you mostly get Whisper's own punctuation. Observed causes: the MMV governance layer prepended a boilerplate sentence to 6 conversational chunks; in the other 5 the model changed capitalisation, mostly where the 1,000-character split cut a sentence. A fix is being measured for v0.3.</p>
+
+  <h2>Measured results</h2>
   <table>
     <thead><tr><th>Panel</th><th class="num">Candidate accepted</th><th class="num">Source retained</th><th class="num">Punctuation-position F1</th></tr></thead>
     <tbody>
-      <tr><td>English, 8 held-out clips × 3 (2026-09-24; repeats identical)</td><td class="num">8/8 clips</td><td class="num">0/8</td><td class="num">0.766 → 0.769</td></tr>
+      <tr><td><strong>English, 12 new clips × 3 (2026-09-26), v0.2.4</strong></td><td class="num">11/12 clips</td><td class="num">1/12</td><td class="num">0.846 → 0.878</td></tr>
+      <tr><td>English meeting, 17.5 min, 12 chunks (AMI), v0.2.4</td><td class="num">1/12 chunks</td><td class="num">11/12</td><td class="num">—</td></tr>
+      <tr><td>English, 8 held-out clips × 3 (2026-09-24), v0.2 prompt</td><td class="num">8/8 clips</td><td class="num">0/8</td><td class="num">0.766 → 0.769</td></tr>
       <tr><td>Mandarin (reference), 8 clips × 3 (2026-09-26)</td><td class="num">21/24 (7/8 clips)</td><td class="num">3/24</td><td class="num">0.278 → 0.786</td></tr>
       <tr><td>Japanese, 12 new clips × 3, v2 prompt</td><td class="num">91.7% (33/36)</td><td class="num">3/36</td><td class="num">0.857</td></tr>
       <tr><td>Japanese, same clips, previous v1 prompt</td><td class="num">83.3% (30/36)</td><td class="num">6/36</td><td class="num">0.857</td></tr>
@@ -69,9 +104,6 @@
 
   <h2>What it is not</h2>
   <p>It does not correct transcription errors — a candidate that fixes a misheard word is rejected because the words changed. Punctuation can still alter meaning; the check does not prove semantic fidelity. Languages other than Japanese and English are unevaluated.</p>
-
-  <h2>Run it</h2>
-  <p>Linux, Python 3.10, PyTorch with CUDA, ffmpeg, Ollama with <code>gemma4:12b-it-qat</code>, and the <a href="https://github.com/mobius-style/mmv">MMV harness</a>. Setup steps, configuration and troubleshooting are in the <a href="README.md">README</a>.</p>
 
   <footer>Copyright © 2025-2026 MOBIUS LLC · Taiko Toeda · AGPL-3.0 · This page is a static mirror of the GitHub repository; the source tree here is byte-identical to the tagged release.</footer>
 </main>

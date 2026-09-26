@@ -12,85 +12,163 @@ short_description: "Local-first speech-to-text: Whisper + on-device Gemma"
 
 *The block above is Hugging Face Space metadata; it is not application configuration.*
 
-# mmv-voice — local-first transcription and punctuation (Whisper + MMV)
+# mmv-voice — private, local-first transcription (Whisper + a local model)
 
-> **Local-first by design.** Audio, transcript, model and formatting all stay
-> on your own machine: Whisper runs locally, the punctuation model is a local
-> `gemma4:12b-it-qat` behind a loopback-only endpoint, and nothing is sent
-> anywhere unless you explicitly switch on the opt-in cloud engine and
-> confirm the dialog. Governance-mediated: every LLM call goes through the
-> MMV harness, never a raw API. A sibling of
-> [mobius-style/mmv](https://github.com/mobius-style/mmv).
+**Turn recordings into punctuated text on your own computer.** Your audio,
+the transcript and the model all stay on your machine. No account, no API
+key, no upload, no telemetry. And the local model is only allowed to add
+punctuation: if it changes a single word or number, its output is thrown
+away and Whisper's own text is kept.
 
-A Linux desktop GUI (Tk) that turns an audio file into verified, structured
-text without leaving your computer. Whisper detects the language automatically
-(about 100 languages); Japanese gets dedicated instructions, other languages
-are processed with "reply in the same language as the input" instructions.
+## Local-first, concretely
 
-**v0.2 (2026-09-25) — local formatting engine replaced.** The default
-formatter is now a *minimal-edit* formatter: it asks a local
-`gemma4:12b-it-qat` (Ollama, via the MMV harness) to insert punctuation and
-line breaks only, then **rejects any candidate whose words or numbers
-changed** and keeps the raw transcript for that chunk instead. Measured
-results and their limits are in [MMV_FORMAT_STATUS.md](MMV_FORMAT_STATUS.md).
-This is a **local trial build**: no fine-tuning, no claim of general model
-quality, small read-speech test panels only. The previous release is
-preserved as tag `v0.1`.
+![Where your data goes: everything runs inside your computer; the network is used once at install time; the cloud engine is opt-in](docs/local-first-dataflow.svg)
+
+- **Audio never leaves your computer.** Whisper runs locally (GPU if
+  available, otherwise CPU).
+- **The model is local, and the application enforces it.** Formatting goes
+  to Ollama on a loopback address (`127.0.0.1`, `localhost`, `[::1]`); the
+  application refuses any other address before it ever calls the model.
+- **The network is used once, at install time.** `install.sh` downloads the
+  Python packages, the Whisper weights, the local model and the MMV harness,
+  asking before each download. After that, with the default settings, the
+  tool makes no network calls while you work. If the Whisper weights are
+  missing, the app asks before downloading them (model file only, never your
+  audio). Opt-in extras differ: `pyannote.audio` speaker attribution fetches
+  its model from Hugging Face on first use, and the cloud engine sends text
+  after you confirm. (Third-party programs such as Ollama follow their own
+  settings.)
+- **Nothing to sign up for.** The default engine needs no account, key or
+  licence server.
+- **Cloud is opt-in, twice.** An optional cloud engine exists for people who
+  want it; it is off by default, needs your own API key, and shows a
+  confirmation dialog before any text is sent.
+- **Your words are protected.** See [How your words are protected](#how-your-words-are-protected).
+
+## Quick start
+
+```bash
+git clone https://github.com/mobius-style/mmv-voice && cd mmv-voice
+bash install.sh --check   # shows what is missing; changes nothing
+bash install.sh           # installs locally, asks before every download
+bash launch.sh            # opens the app
+```
+
+Recording a meeting? Read [Long recordings](#long-recordings-meetings-what-to-expect-today)
+first. Needs Linux with a desktop, Python 3.10+, `ffmpeg`, `python3-tk`, and
+[Ollama](https://ollama.com/download) running. An NVIDIA GPU with 8–16 GB is
+recommended; a single 16 GB card is enough. `install.sh` never uses `sudo` and
+never starts or stops Ollama; it tells you the exact command when something
+system-level is missing. Details and manual steps: [Setup](#setup).
+
+## Using it
+
+1. **Open an audio file** (m4a, wav, mp3 …). Transcription starts at once and
+   streams into the left pane; the language is detected automatically.
+2. **Formatting follows automatically.** The transcript is split into
+   chunks of up to 1,000 characters and each chunk goes to the local model
+   for punctuation and paragraph breaks.
+3. **Read the result** in the right pane. Chunks whose candidate failed the
+   word-and-number check are shown unformatted, exactly as Whisper wrote
+   them.
+4. **Check the "Verification report" tab** if you want to see, per chunk,
+   the source, the model's candidate and why it was accepted or rejected.
+5. **Save** the text, or (optional) export minutes or a digest file.
+   "Stop Whisper → format" formats whatever has been transcribed so far.
+
+Optional features — speaker attribution, an extra LLM fidelity pass,
+minutes — are off by default and use the same local model. (If you
+additionally install `pyannote.audio` for audio-based speaker attribution,
+it downloads its models from Hugging Face the first time it runs.)
+
+## How your words are protected
+
+![The preservation check: a candidate that only adds punctuation is used; a candidate that changes a number or a word is discarded and Whisper's text is kept](docs/preservation-check.svg)
+
+The check compares the words and numbers of every candidate with Whisper's
+text (case-sensitive). Only punctuation and whitespace may differ. This is
+enforced by code and covered by tests; it is not a formal proof, and it
+cannot fix words that Whisper itself misheard. One consequence: if the model
+changes capitalisation (for example on an all-lowercase English input), the
+chunk falls back to Whisper's text unformatted.
+
+A sibling of [mobius-style/mmv](https://github.com/mobius-style/mmv): every
+LLM call goes through the MMV harness, never a raw API. v0.2 replaced the
+v0.1 rewrite-style formatter with this minimal-edit one; v0.1 remains
+available as tag `v0.1`. This is a local trial build: no fine-tuning, small
+read-speech test panels, no claim of general model quality — measured
+results and their limits follow below and in
+[MMV_FORMAT_STATUS.md](MMV_FORMAT_STATUS.md).
 
 ## English results (the language this release is built around)
 
-Everything in v0.2 — documentation, UI, prompts, tests — is written for
-English first. Measured on 8 held-out English FLEURS clips (not used during
-development), 3 runs each at temperature 0:
+Everything — documentation, UI, prompts, tests — is written for English
+first. v0.2.4 fixes the one English weakness found in v0.2: the prompt's
+semicolon hint made the model add semicolons that do not belong (on the
+2026-09-24 panel every changed clip gained one, and punctuation type-accuracy
+fell from 0.681 to 0.500). v0.2.4 deletes that single sentence, nothing else.
 
-- **No word or number changed on any clip.** Every clip's candidate passed
-  the preservation check and was delivered; **no clip fell back** to the raw
-  transcript. The 3 repeats gave identical output, so this is 8 clips, not
-  24 independent trials (Wilson 95% interval for 8/8: 68–100%).
-- **The formatter is designed not to change your transcript's words.** A
-  candidate that alters any word or number is discarded and Whisper's text is
-  kept, so the character error rate is unchanged (5.01% on this panel).
-  Enforced by the preservation check and covered by tests; not a formal
-  proof beyond that coverage. Compare Japanese on the same release: 3 of 36
-  runs fell back to the raw transcript.
-- **Why that matters.** The rewrite-style approach used up to v0.1
-  (rewrite into written prose, drop fillers), re-run on the same 12B QAT
-  model, averaged 20.82% CER on the same clips. More than half of that comes from
-  one clip where it returned a request for the transcript instead of
-  formatted text, and about a quarter from a clip where it silently reworded
-  a list ("acidic, basic, alkaline" became "whether … is acidic, basic, or
-  alkaline"). Per clip the median difference is small, 3 of 8 were tied and
-  it did better on 1. The point is not that it is usually worse, but that a
-  rewriting formatter *can* silently change words, and MMV-Format is built to
-  reject such output.
-- **Known limitation — on this panel English punctuation got worse, not
-  better.** Each of the 7 changed clips gained a semicolon that the reference
-  does not have (some are ungrammatical, e.g. "The Governor's Office; and
-  19…"); in 4 of them an existing Whisper comma was replaced, and one clip
-  also gained two commas. Only the words are guaranteed; the punctuation is
-  not. Against the reference, punctuation-position F1 stayed flat (0.766 →
-  0.769) while position+type F1 fell (0.681 → 0.500). The English prompt's
-  semicolon hint is the likely cause and will be revisited.
-- A regression run on the pre-release build (functionally identical to
-  v0.2; only UI labels differ) accepted 8/8 again on the same clips; one
-  clip's output differed from the 2026-09-24 run.
+Measured on 12 **new** English FLEURS clips (never used before), Whisper
+large-v3-turbo, 3 temperature-0 runs per clip, punctuation scored
+against the reference transcript:
 
-**Reference: Mandarin Chinese** (exploratory, 8 FLEURS `cmn_hans_cn` clips,
-same shipped build; Chinese uses the English prompt branch). 7/8 clips
-accepted in all 3 identical repeats (21/24 runs); the one rejected clip had a
-name separator changed and fell back to Whisper's text. Whisper's Mandarin
-output is lightly punctuated, and formatting raised punctuation-position F1
-from 0.278 to 0.786 and position+type F1 from 0.056 to 0.500; CER stayed
-14.45% by construction. Record:
-[eval/mmv_voice_zh_20260926.md](eval/mmv_voice_zh_20260926.md).
+| Output | Punctuation position F1 | Position + type F1 | Clips accepted |
+|---|---:|---:|---:|
+| Whisper alone | 0.846 | 0.821 | — |
+| v0.2 formatter | 0.892 | 0.659 | 11/12 |
+| **v0.2.4 formatter** | **0.878** | **0.854** | **11/12** |
 
-Scope: small read-speech panel; FLEURS is public, so overlap with Whisper's
-or Gemma's training data is unresolved; timings in the record come from a
-fixed run order and are not a speed comparison; noisy, multi-speaker and
-long recordings are untested. Full record, including that the trial's
-overall verdict was HOLD (for Japanese, addressed exploratorily by the v2
-prompt on a new 12-clip panel):
-[eval/mmv_format_12b_qat_20260924.md](eval/mmv_format_12b_qat_20260924.md).
+- **Words are never changed.** Every delivered chunk has exactly Whisper's
+  words and numbers; where a candidate changed anything (1 of 12 clips here),
+  Whisper's text is kept. On the earlier 8-clip panel, 8/8 clips were kept
+  word-for-word with 0 fallbacks.
+- **Punctuation now roughly matches Whisper's own** on this panel (0.854 vs
+  0.821 type-aware; the intervals overlap, so no difference is established),
+  instead of clearly worse (v0.2: 0.659, an interval that does not overlap
+  v0.2.4's). In practice v0.2.4 leaves Whisper's English punctuation alone on
+  most clips (7 of 12 unchanged) and adds punctuation on 4.
+- **Why the guarantee matters.** The rewrite-style formatter used up to v0.1
+  can silently change words — on the 2026-09-24 clips it reworded a list and
+  once returned a request for the transcript instead of formatted text.
+
+Scope: small read-speech panels; 95% clip-bootstrap intervals overlap
+(details in [eval/mmv_voice_v024_20260926.md](eval/mmv_voice_v024_20260926.md));
+FLEURS is public, so overlap with the models' training data is unresolved.
+Earlier record: [eval/mmv_format_12b_qat_20260924.md](eval/mmv_format_12b_qat_20260924.md)
+(overall verdict HOLD, for Japanese).
+
+## Long recordings (meetings): what to expect today
+
+Tested on a real 17.5-minute, four-person meeting (AMI corpus ES2004a,
+CC BY 4.0), on one RTX 5070 Ti:
+
+- **Transcription works and is fast:** 32 s for the whole meeting including
+  model load (27 s transcribing), whole-card VRAM peak about 5.7 GiB; word
+  error rate 27% against the manual transcript
+  (overlapping, informal speech).
+- **Formatting mostly steps aside:** only **1 of 12** chunks was formatted;
+  the other 11 were returned exactly as Whisper wrote them. Your words are
+  safe, but on meetings you mostly get Whisper's own punctuation.
+- **Observed causes:** in 6 chunks the MMV governance layer prepended a
+  boilerplate sentence to conversational text; in the other 5 the model
+  changed capitalisation — in 4 at a chunk that starts mid-sentence (the
+  1,000-character split cuts sentences), plus mid-chunk changes such as
+  "And" → "and"; one also dropped a repeated "Thank you". All are rejected
+  by the word check, as designed. A fix (strip the known
+  boilerplate before the check, split at sentence ends) is being measured
+  for v0.3.
+
+## Reference: Mandarin Chinese
+
+Exploratory, 8 FLEURS `cmn_hans_cn` clips, measured on v0.2.2 (`voice_mmv.py`
+unchanged through v0.2.3; Chinese uses
+the English prompt branch; v0.2.4's one-sentence English prompt change has
+not been re-measured on Chinese). 7/8 clips accepted in all 3 identical
+repeats (21/24 runs); the one rejected clip had a name separator changed and
+fell back to Whisper's text. Whisper's Mandarin output is lightly punctuated,
+and formatting raised punctuation-position F1 from 0.278 to 0.786 and
+position+type F1 from 0.056 to 0.500; CER stayed 14.45% by construction.
+Record: [eval/mmv_voice_zh_20260926.md](eval/mmv_voice_zh_20260926.md).
 
 ## What it does
 
@@ -159,7 +237,9 @@ Whisper large-v3-turbo, 3 repeats per clip at temperature 0:
 
 | Panel | Candidate acceptance | Actually formatted | Source retained | Punctuation-position F1 vs reference |
 |---|---:|---:|---:|---:|
-| English, 8 held-out clips × 3 (2026-09-24; repeats identical) | 8/8 clips | 7/8 (each added a semicolon the reference lacks) | 0/8 | 0.766 → 0.769 (type-aware 0.681 → 0.500) |
+| **English, 12 new clips × 3 (2026-09-26), v0.2.4 prompt** | **11/12 clips** | 4/12 clips (12/36 runs); 7/12 unchanged | 1/12 clips | 0.846 → 0.878 (type-aware 0.821 → **0.854**) |
+| English, 8 held-out clips × 3 (2026-09-24), v0.2 prompt | 8/8 clips | 7/8 (each added a semicolon the reference lacks) | 0/8 | 0.766 → 0.769 (type-aware 0.681 → 0.500) |
+| English meeting, 17.5 min, 12 chunks (AMI ES2004a), v0.2.4 | 1/12 chunks | 1/12 | 11/12 | — (WER 27.2%, unchanged by design) |
 | Mandarin, 8 clips × 3 (2026-09-26, reference; repeats identical) | 7/8 clips (21/24 runs) | 21/24 | 3/24 | 0.278 → 0.786 (type-aware 0.056 → 0.500) |
 | Japanese, 12 new clips, v2 prompt | 91.7% (33/36) | 30/36 | 3/36 | 0.857 |
 | Japanese, same clips, previous v1 prompt | 83.3% (30/36) | 24/36 | 6/36 | 0.857 |
@@ -212,12 +292,16 @@ started it.
 
 ## Setup
 
+Recommended: `bash install.sh` (see [Quick start](#quick-start)). It performs
+the steps below, skips what is already present, and writes `MMV_REPO` to a
+local `.mmv-voice.env` that `launch.sh` reads. Manual equivalent:
+
 ```bash
 # 1. system packages
 sudo apt install ffmpeg python3-tk
 # 2. PyTorch matching your CUDA (Blackwell example)
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-# 3. Python packages (openai-whisper, requests, pyyaml, rcgov)
+# 3. Python packages (openai-whisper, requests, pyyaml)
 pip install -r requirements.txt
 # 4. Ollama and the evaluated model (network and disk required, once)
 ollama serve            # in another terminal, if not already running as a service
@@ -309,6 +393,7 @@ formatting quality; that comes only from held-out audio trials recorded in
 | Tag | Date | Content |
 |---|---|---|
 | `v0.1` | 2026-07-06 | original release: MMV-M (`gemma4:12b`) via release pointer, filler removal and rewriting, fidelity check, speaker attribution, minutes, digest, opt-in MMV-L |
+| `v0.2.4` | 2026-09-26 | English prompt: semicolon hint removed (measured on 12 new clips); `install.sh` one-command local installer (also pre-fetches Whisper weights so work is offline); local-first README and diagrams; long-meeting result documented |
 | `v0.2.3` | 2026-09-26 | documentation only: English results as the lead topic of the README and landing page; Mandarin reference measurement added in `eval/` |
 | `v0.2.2` | 2026-09-25 | documentation only: local-first wording, Hugging Face metadata (v0.2.1 had invalid Space metadata) |
 | `v0.2` | 2026-09-25 | default engine replaced by MMV-Format (punctuation-only, preservation check, digest pinning, audit in report); speaker / fidelity / minutes now off by default; English documentation; measured trials in `eval/` |
@@ -321,8 +406,10 @@ enforces it. If you need the old behaviour, check out tag `v0.1`.
 ## Local-first and privacy
 
 - **No network at run time by default.** Whisper weights and the Ollama
-  model are loaded from local disk; the formatter endpoint is restricted to
-  loopback (`127.0.0.1` / `localhost`) and any other host is refused.
+  model are loaded from local disk; if the Whisper weights are missing, the
+  app asks before downloading them (model file only). The formatter endpoint
+  is restricted to loopback (`127.0.0.1` / `localhost` / `[::1]`) and the
+  application refuses any other host.
 - **Nothing leaves the machine unless you choose it.** Text is sent off-machine
   only when the MMV-L cloud engine is selected, and only after a confirmation
   dialog names the destination; the digest records which engine was used.

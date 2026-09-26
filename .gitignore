@@ -26,3 +26,4 @@ __pycache__/
 .venv/
 eval/reference_*.csv
 eval/results_*
+.mmv-voice.env
